@@ -1,6 +1,6 @@
 import pytest
 
-from deep import deep_collection
+from deep import DeepCollection
 
 
 @pytest.mark.parametrize(
@@ -8,9 +8,12 @@ from deep import deep_collection
     [
         ([1], [0], 1),
         ((1,), [0], 1),
-        ({0: 'a'}, [0], 'a'),
+        ({4: "a"}, [4], "a"),
+        (["x", [({"foo": "a"},)]], [1, 0, 0, "foo"], "a"),
+        ([1], (0,), 1),
+        # ([{"a": 1}], {0: [], "a": 3}, 1),
     ],
 )
 def test_dp_getitem(obj, path, expected):
-    dc = deep_collection(obj)
+    dc = DeepCollection(obj)
     assert dc[path] == expected
