@@ -64,3 +64,11 @@ class DeepCollection(metaclass=DynamicSubclasser):
         if next_key:
             return DeepCollection(item)[next_key]
         return item
+
+    def __setitem__(self, key, value):
+        print(type(key))
+        super().__setitem__(key, value)
+
+    def path(self, path):
+        breakpoint()
+        return path

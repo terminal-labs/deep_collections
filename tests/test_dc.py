@@ -1,6 +1,6 @@
 import pytest
 
-from deep import DeepCollection
+from ..deep_collection import DeepCollection
 
 
 @pytest.mark.parametrize(
