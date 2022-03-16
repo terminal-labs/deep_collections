@@ -1,5 +1,7 @@
 dist
 build
+.coverage
+.tox
 flymd*
 *.pyc
 *.pyo

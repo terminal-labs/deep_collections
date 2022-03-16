@@ -1,3 +1,33 @@
+import operator
+from functools import reduce
+
+
+def get_by_path(obj, path):
+    """Access a nested object in obj by iterable path.
+    from https://stackoverflow.com/a/14692747/913080
+
+    >>> obj = {"a": ["b", {"c": "d"}]}
+    >>> get_by_path(obj, ["a", 1, "c"])
+    'd'
+    """
+    return reduce(operator.getitem, path, obj)
+
+
+def set_by_path(obj, path, value):
+    """Set a value in a nested object in obj by iterable path.
+    from https://stackoverflow.com/a/14692747/913080
+
+    >>> obj = {"a": ["b", {"c": "d"}]}
+    >>> set_by_path(obj, ["a", 0], "foo")
+    >>> obj
+    {'a': ['foo', {'c': 'd'}]}
+    >>> set_by_path(obj, ["a", 1, "e"], "foo")
+    >>> obj
+    {'a': ['foo', {'c': 'd', 'e': 'foo'}]}
+    """
+    get_by_path(obj, path[:-1])[path[-1]] = value
+
+
 class DynamicSubclasser(type):
     """Return an instance of the class that uses this as its metaclass.
     This metaclass allows for a class to be instantiated with an argument,
@@ -8,6 +38,7 @@ class DynamicSubclasser(type):
     >>> isinstance(foo, int)
     True
     """
+
     def __call__(cls, obj, *args, **kwargs):
         dynamic_parent_cls = type(obj)
 
@@ -27,6 +58,7 @@ class DynamicSubclasser(type):
 
         return instance
 
+
 class DeepCollection(metaclass=DynamicSubclasser):
     """A class intended to allow easy access to items of deep collections.
 
@@ -34,6 +66,7 @@ class DeepCollection(metaclass=DynamicSubclasser):
     >>> dc["a", 1]
     'j'
     """
+
     def __init__(self, obj, *args, original_path=None, **kwargs):
         # This often sets the original value for `self` for mutable types.
         # I.e. it gives a new list its content.
@@ -44,31 +77,22 @@ class DeepCollection(metaclass=DynamicSubclasser):
             pass
 
         self.original_path = original_path
+        self.obj = obj
 
-    def __getitem__(self, key):
+    def __getitem__(self, path):
+        # Assuming a these aren't supposed to be iterated through.
+        if any(isinstance(path, base) for base in (str, bytes, bytearray)):
+            return super().__getitem__(path)
+
         try:
-            iter(key)
+            iter(path)
         except TypeError:
-            item = super().__getitem__(key)
-            try:
-                iter(item)
-            except TypeError:
-                return item
-            return DeepCollection(item)
+            return super().__getitem__(path)
 
-        current_step = key[0]
-        next_key = key[1:]
+        return DeepCollection(get_by_path(self, path))
 
-        item = super().__getitem__(current_step)
-
-        if next_key:
-            return DeepCollection(item)[next_key]
-        return item
-
-    def __setitem__(self, key, value):
-        print(type(key))
-        super().__setitem__(key, value)
-
-    def path(self, path):
-        breakpoint()
-        return path
+    def get(self, path, default=None):
+        try:
+            return self.__getitem__(path)
+        except (KeyError, IndexError, TypeError):
+            return default
