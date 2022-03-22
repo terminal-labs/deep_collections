@@ -1,11 +1,18 @@
 from deep_collection import DeepCollection
 
 
-def test_dict_interface():
+def test_dict_getitem():
     dc = DeepCollection({"nested": {"thing": "spam"}})
 
     assert dc["nested"] == {"thing": "spam"}
     assert dc["nested", "thing"] == "spam"
+
+    assert isinstance(dc["nested"], dict)
+    assert isinstance(dc["nested"], DeepCollection)
+
+
+def test_dict_get():
+    dc = DeepCollection({"nested": {"thing": "spam"}})
 
     assert dc.get("nested") == {"thing": "spam"}
     assert dc.get(["nested", "thing"]) == "spam"
@@ -20,3 +27,6 @@ def test_dict_interface():
     assert dc.get("nested", "foo") == {"thing": "spam"}
     assert dc.get(["nested", "foo"]) is None
     assert dc.get(["nested", "foo"], "bar") == "bar"
+
+    assert isinstance(dc.get("nested"), dict)
+    assert isinstance(dc.get("nested"), DeepCollection)

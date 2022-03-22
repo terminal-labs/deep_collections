@@ -28,6 +28,27 @@ def set_by_path(obj, path, value):
     get_by_path(obj, path[:-1])[path[-1]] = value
 
 
+def _stringlike(obj):
+    return any(isinstance(obj, base) for base in (str, bytes, bytearray))
+
+
+def _can_be_deep(obj):
+    """Determine if an object could be a nested collection.
+
+    The general heuristic is that an object must be iterable, but not stringlike
+    so that an element can be arbitrary like another collection.
+    """
+    try:
+        iter(obj)
+    except TypeError:
+        return False
+
+    if _stringlike(obj):
+        return False
+
+    return True
+
+
 class DynamicSubclasser(type):
     """Return an instance of the class that uses this as its metaclass.
     This metaclass allows for a class to be instantiated with an argument,
@@ -79,17 +100,33 @@ class DeepCollection(metaclass=DynamicSubclasser):
         self.original_path = original_path
         self.obj = obj
 
-    def __getitem__(self, path):
-        # Assuming a these aren't supposed to be iterated through.
-        if any(isinstance(path, base) for base in (str, bytes, bytearray)):
-            return super().__getitem__(path)
-
+    def __getattr__(self, item):
         try:
-            iter(path)
-        except TypeError:
-            return super().__getitem__(path)
+            return self[item]
+        except (KeyError, IndexError):
+            raise AttributeError(f"DeepCollection has no attr {item}")
 
-        return DeepCollection(get_by_path(self, path))
+    def __getitem__(self, path):
+        def get_raw():
+            # self.obj instead of self to avoid unnecessary intermediate
+            # DeepCollections. Just make a final conversion at the end.
+
+            # Assume these aren't supposed to be iterated through.
+            if _stringlike(path):
+                return self.obj[path]
+
+            try:
+                iter(path)
+            except TypeError:
+                return self.obj[path]
+
+            return get_by_path(self.obj, path)
+
+        rv = get_raw()
+
+        if _can_be_deep(rv):
+            return DeepCollection(rv)
+        return rv
 
     def get(self, path, default=None):
         try:

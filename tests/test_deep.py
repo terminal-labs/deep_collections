@@ -26,10 +26,19 @@ from deep_collection import DeepCollection
             {"very": {"deeply": {"nested": ["thing", "spam"]}}},
             "very",
             {"deeply": {"nested": ["thing", "spam"]}},
-        )
-        # ([{"a": 1}], {0: [], "a": 3}, 1),
+        ),
     ],
 )
-def test_dp_getitem(obj, path, expected):
+def test_getitem(obj, path, expected):
     dc = DeepCollection(obj)
     assert dc[path] == expected
+
+
+def test_getattr():
+    dc = DeepCollection({"nested": [{"thing": "spam"}]})
+    assert dc.nested == [{"thing": "spam"}]
+    assert dc.nested[0] == {"thing": "spam"}
+    assert dc.nested[0].thing == "spam"
+
+    with pytest.raises(AttributeError):
+        dc.foo
