@@ -49,7 +49,7 @@ def test_getattr():
     assert dc.pop != "tricky"
 
 
-def test_setattr():
+def test_setitem():
     dc = DeepCollection({"nested": {"thing": "spam"}, "pop": "tricky"})
 
     dc["foo"] = [3]
@@ -70,3 +70,18 @@ def test_setattr():
     assert dc["bar", "baz"] == 3
     assert "bar" in dc
     assert "baz" in dc["bar"]
+
+
+def test_delitem():
+    dc = DeepCollection({"deeply": {"nested": {"thing": "spam"}}})
+
+    del dc["deeply", "nested", "thing"]
+    assert dc == {"deeply": {"nested": {}}}
+    del dc["deeply"]
+    assert dc == {}
+
+    dc = DeepCollection({"deeply": [0, 1, {"nested": {"thing": "spam"}}]})
+    del dc["deeply", 2, "nested", "thing"]
+    assert dc == {"deeply": [0, 1, {"nested": {}}]}
+    del dc["deeply", 1]
+    assert dc == {"deeply": [0, {"nested": {}}]}

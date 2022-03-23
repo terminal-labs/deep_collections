@@ -2,6 +2,18 @@ import operator
 from functools import reduce
 
 
+def del_by_path(obj, path):
+    """Delete a key-value in a nested object in root by item sequence.
+    from https://stackoverflow.com/a/14692747/913080
+
+    >>> obj = {"a": ["b", {"c": "d"}]}
+    >>> del_by_path(obj, ("a", 0))
+    >>> obj
+    {'a': [{'c': 'd'}]}
+    """
+    del get_by_path(obj, path[:-1])[path[-1]]
+
+
 def get_by_path(obj, path):
     """Access a nested object in obj by iterable path.
     from https://stackoverflow.com/a/14692747/913080
@@ -15,7 +27,9 @@ def get_by_path(obj, path):
 
 def set_by_path(obj, path, value):
     """Set a value in a nested object in obj by iterable path.
-    from https://stackoverflow.com/a/14692747/913080
+
+    If the path doesn't fully exist, this will create it to set the value,
+    making dicts along the way.
 
     >>> obj = {"a": ["b", {"c": "d"}]}
     >>> set_by_path(obj, ["a", 0], "foo")
@@ -109,6 +123,8 @@ class DeepCollection(metaclass=DynamicSubclasser):
         # This often sets the original value for `self` for mutable types.
         # I.e. it gives a new list its content.
         # Immutables like tuples often already have the base class set via __new__.
+        # print(f"{obj=}")
+
         try:
             super().__init__(obj, *args, **kwargs)
         except TypeError:  # self is immutable - like a tuple
@@ -150,12 +166,19 @@ class DeepCollection(metaclass=DynamicSubclasser):
             return DeepCollection(rv)
         return rv
 
+    def __delitem__(self, path):
+        if _can_be_deep(path):
+            del_by_path(self, path)
+        else:
+            super().__delitem__(path)
+            del self.obj[path]
+
     def __setitem__(self, path, value):
-        if not _can_be_deep(path):
+        if _can_be_deep(path):
+            set_by_path(self, path, value)
+        else:
             super().__setitem__(path, value)
             self.obj[path] = value
-        else:
-            set_by_path(self, path, value)
 
     def get(self, path, default=None):
         try:
