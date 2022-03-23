@@ -1,7 +1,9 @@
+import pytest
+
 from deep_collection import DeepCollection
 
 
-def test_dict_getitem():
+def test_getitem():
     dc = DeepCollection({"nested": {"thing": "spam"}})
 
     assert dc["nested"] == {"thing": "spam"}
@@ -11,7 +13,7 @@ def test_dict_getitem():
     assert isinstance(dc["nested"], DeepCollection)
 
 
-def test_dict_get():
+def test_get():
     dc = DeepCollection({"nested": {"thing": "spam"}})
 
     assert dc.get("nested") == {"thing": "spam"}
@@ -30,3 +32,41 @@ def test_dict_get():
 
     assert isinstance(dc.get("nested"), dict)
     assert isinstance(dc.get("nested"), DeepCollection)
+
+
+def test_getattr():
+    dc = DeepCollection({"nested": {"thing": "spam"}, "pop": "tricky"})
+
+    assert dc.nested == {"thing": "spam"}
+    assert dc.nested.thing == "spam"
+
+    assert isinstance(dc.nested, dict)
+    assert isinstance(dc.nested, DeepCollection)
+
+    with pytest.raises(AttributeError):
+        dc.foo
+
+    assert dc.pop != "tricky"
+
+
+def test_setattr():
+    dc = DeepCollection({"nested": {"thing": "spam"}, "pop": "tricky"})
+
+    dc["foo"] = [3]
+    assert dc["foo"] == [3]
+    assert dc.get("foo") == [3]
+    assert "foo" in dc
+
+    dc["foo", 0] = 5
+    assert dc["foo"] == [5]
+
+    dc["foo"] = 3
+    assert dc["foo"] == 3
+
+    with pytest.raises(TypeError):
+        dc["foo", "bar"] = [3]
+
+    dc["bar", "baz"] = 3
+    assert dc["bar", "baz"] == 3
+    assert "bar" in dc
+    assert "baz" in dc["bar"]
