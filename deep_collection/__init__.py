@@ -67,7 +67,7 @@ def _can_be_deep(obj):
     """Determine if an object could be a nested collection.
 
     The general heuristic is that an object must be iterable, but not stringlike
-    so that an element can be arbitrary like another collection.
+    so that an element can be arbitrary, like another collection.
     """
     try:
         iter(obj)
@@ -128,21 +128,25 @@ class DeepCollection(metaclass=DynamicSubclasser):
             super().__init__(obj, *args, **kwargs)
         except TypeError:  # self is immutable - like a tuple
             pass
-        except AttributeError:
-            # NOTE: compat
+        except AttributeError as e:
+            # NOTE: compat - dotty_dict
             # This amounts to a token compatibility with dotty_dict. Many methods and
             # features overlap. Try to prefer ours, and fall back to theirs.
             #
             # dotty_dict enforces an instance check on its first arg that dotty_dict
             # itself fails.
             #
-            # Use this hacky type check to avoid actually needing
-            # dotty_dict as a dependency to this project.
-            dotty_cls = "<class 'dotty_dict.dotty_dict.Dotty'>"
-            if f"{obj.__class__}" == dotty_cls or dotty_cls in [
-                f"{base}" for base in obj.__class__.__bases__
-            ]:
+            # Can't test for dotty without dotty available. If that's the case, fall
+            # back to the original AttributeError because we can't tell why we get it.
+            try:
+                from dotty_dict import Dotty
+            except ModuleNotFoundError:
+                raise e
+
+            if isinstance(obj, Dotty):
                 super().__init__(obj.to_dict(), *args, **kwargs)
+            else:  # We have Dotty available, but that's not obj.
+                raise e
 
         # In addition to inheritence, we also use composition so that we can do faster
         # calculations internally against the original type, without having the overhead
