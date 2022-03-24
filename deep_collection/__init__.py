@@ -123,14 +123,26 @@ class DeepCollection(metaclass=DynamicSubclasser):
         # This often sets the original value for `self` for mutable types.
         # I.e. it gives a new list its content.
         # Immutables like tuples often already have the base class set via __new__.
-        # print(f"{obj=}")
 
         try:
             super().__init__(obj, *args, **kwargs)
         except TypeError:  # self is immutable - like a tuple
             pass
-
-        self.original_path = original_path
+        except AttributeError:
+            # NOTE: compat
+            # This amounts to a token compatibility with dotty_dict. Many methods and
+            # features overlap. Try to prefer ours, and fall back to theirs.
+            #
+            # dotty_dict enforces an instance check on its first arg that dotty_dict
+            # itself fails.
+            #
+            # Use this hacky type check to avoid actually needing
+            # dotty_dict as a dependency to this project.
+            dotty_cls = "<class 'dotty_dict.dotty_dict.Dotty'>"
+            if f"{obj.__class__}" == dotty_cls or dotty_cls in [
+                f"{base}" for base in obj.__class__.__bases__
+            ]:
+                super().__init__(obj.to_dict(), *args, **kwargs)
 
         # In addition to inheritence, we also use composition so that we can do faster
         # calculations internally against the original type, without having the overhead
@@ -146,7 +158,7 @@ class DeepCollection(metaclass=DynamicSubclasser):
 
     def __getitem__(self, path):
         def get_raw():
-            # self.obj instead of self to avoid unnecessary intermediate
+            # Use self.obj instead of self to avoid unnecessary intermediate
             # DeepCollections. Just make a final conversion at the end.
 
             # Assume strs aren't supposed to be iterated through.
