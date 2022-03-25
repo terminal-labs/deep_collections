@@ -152,7 +152,13 @@ class DynamicSubclasser(type):
     True
     """
 
-    def __call__(cls, obj, *args, **kwargs):
+    def __call__(cls, *args, **kwargs):
+        if args:
+            obj = args[0]
+            args = args[1:]
+        else:
+            obj = {}
+
         dynamic_parent_cls = type(obj)
 
         # Make this metaclass inherit from the dynamic_parent's metaclass.
