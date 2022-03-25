@@ -2,6 +2,27 @@ import operator
 from functools import reduce
 
 
+def _stringlike(obj):
+    return any(isinstance(obj, base) for base in (str, bytes, bytearray))
+
+
+def _can_be_deep(obj):
+    """Determine if an object could be a nested collection.
+
+    The general heuristic is that an object must be iterable, but not stringlike
+    so that an element can be arbitrary, like another collection.
+    """
+    try:
+        iter(obj)
+    except TypeError:
+        return False
+
+    if _stringlike(obj):
+        return False
+
+    return True
+
+
 def del_by_path(obj, path):
     """Delete a key-value in a nested object in root by item sequence.
     from https://stackoverflow.com/a/14692747/913080
@@ -59,25 +80,65 @@ def set_by_path(obj, path, value):
             branch[part] = value
 
 
-def _stringlike(obj):
-    return any(isinstance(obj, base) for base in (str, bytes, bytearray))
+def paths_to_field(obj, field, current=None):
+    """Return the path to a specified field and the associated value. This is useful to
+    determin what is using e.g. "password".
 
+    Because this can handle a generalized config, which can have lists in it, this can
+    also handle a list of all configs.
 
-def _can_be_deep(obj):
-    """Determine if an object could be a nested collection.
-
-    The general heuristic is that an object must be iterable, but not stringlike
-    so that an element can be arbitrary, like another collection.
+    >>> list(paths_to_field({"x": "value"}, "x"))
+    [['x']]
+    >>> list(paths_to_field({"x": {"y": "value"}}, "y"))
+    [['x', 'y']]
+    >>> list(paths_to_field(["value"], "x"))
+    []
+    >>> list(paths_to_field([{"x": "value"}], "x"))
+    [[0, 'x']]
+    >>> list(paths_to_field({"x": ["a", "b", {"y": "value"}]}, "y"))
+    [['x', 2, 'y']]
+    >>> list(paths_to_field([{"x": {"y": "value", "z": {"y": "asdf"}}}], "y"))
+    [[0, 'x', 'y'], [0, 'x', 'z', 'y']]
     """
-    try:
-        iter(obj)
-    except TypeError:
-        return False
+    if current is None:
+        current = []
 
-    if _stringlike(obj):
-        return False
+    # field is compound
+    if _can_be_deep(field):
+        try:
+            get_by_path(obj, field)
+        except (KeyError, IndexError, TypeError):
+            try:
+                for k, v in obj.items():
+                    yield from paths_to_field(v, field, current + [k])
+            except AttributeError:
+                for idx, i in enumerate(obj):
+                    yield from paths_to_field(i, field, current + [idx])
+        else:
+            yield current + list(field)
+    else:  # field is simple; str, int, float, etc.
+        try:
+            for k, v in obj.items():
+                if k == field:
+                    yield current + [k]
+                if _can_be_deep(v):
+                    yield from paths_to_field(v, field, current + [k])
+        except AttributeError:
+            for idx, i in enumerate(obj):
+                if i == field:
+                    yield current + [idx]
+                if _can_be_deep(i):
+                    yield from paths_to_field(i, field, current + [idx])
 
-    return True
+
+def values_for_field(obj, field):
+    """Generate all values for a given field.
+
+    >>> list(values_for_field([{"x": {"y": "value", "z": {"y": "value"}}, "y": {1: 2}}], "y"))
+    ['value', 'value', {1: 2}]
+    """
+    for path in paths_to_field(obj, field):
+        yield get_by_path(obj, path)
 
 
 class DynamicSubclasser(type):
@@ -201,3 +262,9 @@ class DeepCollection(metaclass=DynamicSubclasser):
             return self.__getitem__(path)
         except (KeyError, IndexError, TypeError):
             return default
+
+    def paths_to_field(self, field):
+        yield from paths_to_field(self, field)
+
+    def values_for_field(self, field):
+        yield from values_for_field(self, field)
