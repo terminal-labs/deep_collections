@@ -1,5 +1,6 @@
 import operator
 from functools import reduce
+from functools import wraps
 
 
 def _stringlike(obj):
@@ -21,6 +22,28 @@ def _can_be_deep(obj):
         return False
 
     return True
+
+
+def _sync_self_and_obj(method):
+    """Wrap any method that needs to act on self.obj. This ensures self and self.obj
+    are synced. A super class method (such as append for a list) may mutate self,
+    but leave self.obj unchanged. self.obj needs synced sometime.
+
+    XXX: Should this just run on __getattribute__? What if someone requests self.obj itself?
+    """
+
+    @wraps(method)
+    def wrapped(*args, **kwargs):
+
+        self = args[0]
+        if self != self.obj:
+            self.obj = type(self.obj)(self)
+
+        result = method(*args, **kwargs)
+
+        return result
+
+    return wrapped
 
 
 def del_by_path(obj, path):
@@ -222,11 +245,13 @@ class DeepCollection(metaclass=DynamicSubclasser):
         self.obj = obj
 
     def __getattr__(self, item):
+        """This turns a dot attr access into a getitem attempt."""
         try:
             return self[item]
         except (KeyError, IndexError):
             raise AttributeError(f"DeepCollection has no attr {item}")
 
+    @_sync_self_and_obj
     def __getitem__(self, path):
         def get_raw():
             # Use self.obj instead of self to avoid unnecessary intermediate
@@ -249,6 +274,7 @@ class DeepCollection(metaclass=DynamicSubclasser):
             return DeepCollection(rv)
         return rv
 
+    # @_sync_self_and_obj
     def __delitem__(self, path):
         if _can_be_deep(path):
             del_by_path(self, path)
@@ -256,6 +282,7 @@ class DeepCollection(metaclass=DynamicSubclasser):
             super().__delitem__(path)
             del self.obj[path]
 
+    # @_sync_self_and_obj
     def __setitem__(self, path, value):
         if _can_be_deep(path):
             set_by_path(self, path, value)
