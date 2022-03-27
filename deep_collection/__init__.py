@@ -24,7 +24,7 @@ def _can_be_deep(obj):
     return True
 
 
-def _sync_self_and_obj(method):
+def _ensure_synced(self, method):
     """Wrap any method that needs to act on self.obj. This ensures self and self.obj
     are synced. A super class method (such as append for a list) may mutate self,
     but leave self.obj unchanged. self.obj needs synced sometime.
@@ -34,12 +34,11 @@ def _sync_self_and_obj(method):
 
     @wraps(method)
     def wrapped(*args, **kwargs):
+        result = method(*args, **kwargs)
 
-        self = args[0]
+        nonlocal self
         if self != self.obj:
             self.obj = type(self.obj)(self)
-
-        result = method(*args, **kwargs)
 
         return result
 
@@ -244,6 +243,13 @@ class DeepCollection(metaclass=DynamicSubclasser):
         # necessary, but helps performance a lot.
         self.obj = obj
 
+    def __getattribute__(self, name):
+        if name not in dir(DeepCollection) and name in dir(self):
+            method = object.__getattribute__(self, name)
+            if callable(method):
+                return _ensure_synced(self, method)
+        return object.__getattribute__(self, name)
+
     def __getattr__(self, item):
         """This turns a dot attr access into a getitem attempt."""
         try:
@@ -251,7 +257,6 @@ class DeepCollection(metaclass=DynamicSubclasser):
         except (KeyError, IndexError):
             raise AttributeError(f"DeepCollection has no attr {item}")
 
-    @_sync_self_and_obj
     def __getitem__(self, path):
         def get_raw():
             # Use self.obj instead of self to avoid unnecessary intermediate
@@ -274,7 +279,6 @@ class DeepCollection(metaclass=DynamicSubclasser):
             return DeepCollection(rv)
         return rv
 
-    # @_sync_self_and_obj
     def __delitem__(self, path):
         if _can_be_deep(path):
             del_by_path(self, path)
@@ -282,7 +286,6 @@ class DeepCollection(metaclass=DynamicSubclasser):
             super().__delitem__(path)
             del self.obj[path]
 
-    # @_sync_self_and_obj
     def __setitem__(self, path, value):
         if _can_be_deep(path):
             set_by_path(self, path, value)
