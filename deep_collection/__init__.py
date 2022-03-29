@@ -24,27 +24,6 @@ def _can_be_deep(obj):
     return True
 
 
-def _ensure_synced(self, method):
-    """Wrap any method that needs to act on self.obj. This ensures self and self.obj
-    are synced. A super class method (such as append for a list) may mutate self,
-    but leave self.obj unchanged. self.obj needs synced sometime.
-
-    XXX: Should this just run on __getattribute__? What if someone requests self.obj itself?
-    """
-
-    @wraps(method)
-    def wrapped(*args, **kwargs):
-        result = method(*args, **kwargs)
-
-        nonlocal self
-        if self != self.obj:
-            self.obj = type(self.obj)(self)
-
-        return result
-
-    return wrapped
-
-
 def del_by_path(obj, path):
     """Delete a key-value in a nested object in root by item sequence.
     from https://stackoverflow.com/a/14692747/913080
@@ -133,7 +112,7 @@ def paths_to_field(obj, field, current=None):
             try:
                 for k, v in obj.items():
                     yield from paths_to_field(v, field, current + [k])
-            except AttributeError:
+            except AttributeError:  # no .items
                 for idx, i in enumerate(obj):
                     yield from paths_to_field(i, field, current + [idx])
         else:
@@ -145,7 +124,7 @@ def paths_to_field(obj, field, current=None):
                     yield current + [k]
                 if _can_be_deep(v):
                     yield from paths_to_field(v, field, current + [k])
-        except AttributeError:
+        except AttributeError:  # no .items
             for idx, i in enumerate(obj):
                 if i == field:
                     yield current + [idx]
@@ -183,16 +162,19 @@ class DynamicSubclasser(type):
 
         dynamic_parent_cls = type(obj)
 
-        # Make this metaclass inherit from the dynamic_parent's metaclass.
-        # This avoids metaclass conflicts.
+        # Make a new_cls that inherits from the dynamic_parent_cls, and resolving
+        # potential metaclass conflicts if the dynamic_parent_cls doesn't already
+        # use this metaclass.
         mcls = type(cls)
-        cls.__class__ = type(mcls.__name__, (mcls, type(dynamic_parent_cls)), {})
-
-        # Make a new class that inherits from the old and the object type.
-        new_cls = type(cls.__name__, (cls, dynamic_parent_cls), {})
+        if isinstance(dynamic_parent_cls, mcls):
+            new_cls = type(cls.__name__, (dynamic_parent_cls,), {})
+        else:
+            cls.__class__ = type(mcls.__name__, (mcls, type(dynamic_parent_cls)), {})
+            new_cls = type(cls.__name__, (cls, dynamic_parent_cls), {})
 
         # Create the instance and initialize it with the given object.
         # Sets obj in instance for immutables like `tuple`
+        # instance = new_cls.__new__(new_cls, obj, *args, **kwargs)
         instance = new_cls.__new__(new_cls, obj, *args, **kwargs)
         # Sets obj in instance for mutables like `list`
         instance.__init__(obj, *args, **kwargs)
@@ -237,41 +219,64 @@ class DeepCollection(metaclass=DynamicSubclasser):
             else:  # We have Dotty available, but that's not obj.
                 raise e
 
-        # In addition to inheritence, we also use composition so that we can do faster
-        # calculations internally against the original type, without having the overhead
-        # of our metaclass at every step of the way. Composition isn't strictly
-        # necessary, but helps performance a lot.
-        self.obj = obj
+        # self._obj is never meant to be set except from self because we can't
+        # easily update self if self._obj changes.
+        self._obj = obj
+
+    def _ensure_post_call_sync(self, method):
+        """Wrap any method to ensure that if if mutates self,
+        self.obj is mutated to match. Inherited methods like list's `append` would act on
+        self, but we also rely on composistion, so self.obj needs to be kept in sync.
+
+        This decorator, used in __getattribute__, allows us to passively catch such
+        cases without having to know ahead of time what these methods are. This gives
+        us more generality, and also let's us not have to include such methods in this
+        class. We also don't want an e.g. `append` here unless the parent has it.
+        """
+
+        @wraps(method)
+        def wrapped(*args, **kwargs):
+            result = method(*args, **kwargs)
+            if self._obj != self:
+                self._obj = type(self._obj)(self)
+            return result
+
+        return wrapped
 
     def __getattribute__(self, name):
+        """Overridden to ensure self._obj stays in sync with self if self mutates
+        from an inherited method being called.
+
+        See self._ensure_post_call_sync
+        """
         if name not in dir(DeepCollection) and name in dir(self):
             method = object.__getattribute__(self, name)
-            if callable(method):
-                return _ensure_synced(self, method)
+            if callable(method) and not name.startswith("_"):
+                return self._ensure_post_call_sync(method)
         return object.__getattribute__(self, name)
 
     def __getattr__(self, item):
-        """This turns a dot attr access into a getitem attempt."""
+        """This turns a missing dot attr access into a getitem attempt."""
         try:
             return self[item]
-        except (KeyError, IndexError):
+        except (KeyError, IndexError, TypeError):
             raise AttributeError(f"DeepCollection has no attr {item}")
 
     def __getitem__(self, path):
         def get_raw():
-            # Use self.obj instead of self to avoid unnecessary intermediate
+            # Use self._obj instead of self to avoid unnecessary intermediate
             # DeepCollections. Just make a final conversion at the end.
 
             # Assume strs aren't supposed to be iterated through.
             if _stringlike(path):
-                return self.obj[path]
+                return self._obj[path]
 
             try:
                 iter(path)
             except TypeError:
-                return self.obj[path]
+                return self._obj[path]
 
-            return get_by_path(self.obj, path)
+            return get_by_path(self._obj, path)
 
         rv = get_raw()
 
@@ -284,14 +289,14 @@ class DeepCollection(metaclass=DynamicSubclasser):
             del_by_path(self, path)
         else:
             super().__delitem__(path)
-            del self.obj[path]
+            del self._obj[path]
 
     def __setitem__(self, path, value):
         if _can_be_deep(path):
             set_by_path(self, path, value)
         else:
             super().__setitem__(path, value)
-            self.obj[path] = value
+            self._obj[path] = value
 
     def get(self, path, default=None):
         try:
