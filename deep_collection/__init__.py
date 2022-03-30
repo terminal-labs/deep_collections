@@ -181,6 +181,31 @@ class DynamicSubclasser(type):
 
         return instance
 
+    def __instancecheck__(cls, inst):
+        """If the dynamic parent subclasses an abc, the result __instancecheck__
+        would fail against the original base class.
+
+        I think this is because our calculated class's __instancecheck__ would rely on
+        ._abc_impl being implemented correctly on the immediate parent class, which is
+        our base. Rather than trying to correctly implement a modified _abc_impl
+        ourselves, we can use the naive method given in
+        https://peps.python.org/pep-3119/#overloading-isinstance-and-issubclass
+        """
+        return any(cls.__subclasscheck__(c) for c in {type(inst), inst.__class__})
+
+    def __subclasscheck__(cls, sub):
+        """If the dynamic parent subclasses an abc, the result __subclasscheck__
+        would fail against the original base class.
+
+        I think this is because our calculated class's __subclasscheck__ would rely on
+        ._abc_impl being implemented correctly on the immediate parent class, which is
+        our base. Rather than trying to correctly implement a modified _abc_impl
+        ourselves, we can use the naive method given in
+        https://peps.python.org/pep-3119/#overloading-isinstance-and-issubclass
+        """
+        candidates = cls.__dict__.get("__subclass__", set()) | {cls}
+        return any(c in candidates for c in sub.mro())
+
 
 class DeepCollection(metaclass=DynamicSubclasser):
     """A class intended to allow easy access to items of deep collections.

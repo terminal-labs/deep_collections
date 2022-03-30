@@ -42,3 +42,9 @@ def test_getattr():
 
     with pytest.raises(AttributeError):
         dc.foo
+
+
+def test_reinitialization():
+    dc = DeepCollection({"nested": [{"thing": "spam"}]})
+
+    assert DeepCollection(dc) == dc
