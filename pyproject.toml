@@ -1,9 +1,27 @@
 [tool.poetry]
 name = "deep_collection"
-version = "0.1.0"
-description = "Easy access to items in deep collections."
+version = "0.1.0b1"
 authors = ["Joseph Nix <nixjdm@terminallabs.com>"]
+classifiers=[
+    'Intended Audience :: Developers',
+    'License :: OSI Approved :: BSD License',
+    'Natural Language :: English',
+    'Programming Language :: Python :: 3 :: Only',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.7',
+    'Programming Language :: Python :: 3.8',
+    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: Implementation :: CPython',
+    'Programming Language :: Python :: Implementation :: PyPy',
+    'Topic :: Software Development :: Libraries :: Python Modules',
+    'Topic :: Software Development',
+]
+description = "Easy access to items in deep collections."
+keywords = ["deep", "nested", "dict", "json", "data"]
 license = "BSD"
+readme = "README.md"
+repository = "https://github.com/terminal-labs/deep_collection"
 
 [tool.poetry.dependencies]
 python = "^3.7"
