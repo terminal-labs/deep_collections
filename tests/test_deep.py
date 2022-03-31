@@ -48,3 +48,16 @@ def test_reinitialization():
     dc = DeepCollection({"nested": [{"thing": "spam"}]})
 
     assert DeepCollection(dc) == dc
+
+
+def test_subclass():
+    class Foo(DeepCollection):
+        pass
+
+    dc = Foo({"nested": [{"thing": "spam"}]})
+
+    assert DeepCollection(dc) == dc
+    assert isinstance(dc, Foo)
+    assert isinstance(dc, DeepCollection)
+    assert isinstance(dc, dict)
+    assert issubclass(Foo, DeepCollection)
