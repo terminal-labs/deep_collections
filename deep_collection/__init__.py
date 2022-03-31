@@ -142,6 +142,25 @@ def values_for_field(obj, field):
         yield get_by_path(obj, path)
 
 
+def deduped_items(items):
+    """Return a dedpued list of all items. This is not trivial
+    since some values are dicts and thus are not hashable.
+
+    Returned order is not gaurunteed.
+
+    >>> deduped_items(["a", {1:{2:{3:4}}}, {4}, {1:{2:{3:4}}}, {4}, {4}, 1, 1, "a"])
+    [{1: {2: {3: 4}}}, {4}, 1, 'a']
+    >>> deduped_items([{1:{2:{3:4}}}, {1:{2:{3:4}}}, {1:{2:{3:7}}}])
+    [{1: {2: {3: 4}}}, {1: {2: {3: 7}}}]
+    """
+
+    try:
+        return list(set(items))
+    except TypeError:
+        # next line from https://stackoverflow.com/a/9428041
+        return [i for n, i in enumerate(items) if i not in items[n + 1 :]]  # noqa: E203
+
+
 class DynamicSubclasser(type):
     """Return an instance of the class that uses this as its metaclass.
     This metaclass allows for a class to be instantiated with an argument,
@@ -215,7 +234,7 @@ class DeepCollection(metaclass=DynamicSubclasser):
     'j'
     """
 
-    def __init__(self, obj, *args, original_path=None, **kwargs):
+    def __init__(self, obj, *args, return_deep=True, **kwargs):
         # This often sets the original value for `self` for mutable types.
         # I.e. it gives a new list its content.
         # Immutables like tuples often already have the base class set via __new__.
@@ -247,6 +266,8 @@ class DeepCollection(metaclass=DynamicSubclasser):
         # self._obj is never meant to be set except from self because we can't
         # easily update self if self._obj changes.
         self._obj = obj
+
+        self.return_deep = return_deep
 
     def _ensure_post_call_sync(self, method):
         """Wrap any method to ensure that if if mutates self,
@@ -305,7 +326,7 @@ class DeepCollection(metaclass=DynamicSubclasser):
 
         rv = get_raw()
 
-        if _can_be_deep(rv):
+        if _can_be_deep(rv) and self.return_deep:
             return DeepCollection(rv)
         return rv
 
@@ -323,6 +344,9 @@ class DeepCollection(metaclass=DynamicSubclasser):
             super().__setitem__(path, value)
             self._obj[path] = value
 
+    def __repr__(self):
+        return f"DeepCollection({super().__repr__()})"
+
     def get(self, path, default=None):
         try:
             return self.__getitem__(path)
@@ -334,3 +358,13 @@ class DeepCollection(metaclass=DynamicSubclasser):
 
     def values_for_field(self, field):
         yield from values_for_field(self, field)
+
+    def deduped_values_for_field(self, field):
+        """
+        >>> dc = DeepCollection([{"x": {"y": "v", "z": {"y": "v"}}, "y": {1: 2}}], return_deep=False)
+        >>> 'v' in dc.deduped_values_for_field("y")  # order not gaurunteed
+        True
+        >>> {1: 2} in dc.deduped_values_for_field("y")  # order not gaurunteed
+        True
+        """
+        return deduped_items(list(values_for_field(self, field)))
