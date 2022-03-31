@@ -4,6 +4,14 @@ from functools import wraps
 
 
 def _stringlike(obj):
+    """Return True if obj is an instance of str, bytes, or bytearray
+    >>> _stringlike("a")
+    True
+    >>> _stringlike(b"a")
+    True
+    >>> _stringlike(1)
+    False
+    """
     return any(isinstance(obj, base) for base in (str, bytes, bytearray))
 
 
@@ -12,6 +20,14 @@ def _can_be_deep(obj):
 
     The general heuristic is that an object must be iterable, but not stringlike
     so that an element can be arbitrary, like another collection.
+    >>> _can_be_deep([1])
+    True
+    >>> _can_be_deep({1:2})
+    True
+    >>> _can_be_deep(1)
+    False
+    >>> _can_be_deep("a")
+    False
     """
     try:
         iter(obj)
@@ -146,8 +162,6 @@ def deduped_items(items):
     """Return a dedpued list of all items. This is not trivial
     since some values are dicts and thus are not hashable.
 
-    Returned order is not gaurunteed.
-
     >>> deduped_items(["a", {1:{2:{3:4}}}, {4}, {1:{2:{3:4}}}, {4}, {4}, 1, 1, "a"])
     [{1: {2: {3: 4}}}, {4}, 1, 'a']
     >>> deduped_items([{1:{2:{3:4}}}, {1:{2:{3:4}}}, {1:{2:{3:7}}}])
@@ -201,8 +215,8 @@ class DynamicSubclasser(type):
         return instance
 
     def __instancecheck__(cls, inst):
-        """If the dynamic parent subclasses an abc, the result __instancecheck__
-        would fail against the original base class.
+        """If the dynamic parent subclasses an abc (like UserList), the result
+        __instancecheck__ would fail against the original base class.
 
         I think this is because our calculated class's __instancecheck__ would rely on
         ._abc_impl being implemented correctly on the immediate parent class, which is
@@ -213,8 +227,8 @@ class DynamicSubclasser(type):
         return any(cls.__subclasscheck__(c) for c in {type(inst), inst.__class__})
 
     def __subclasscheck__(cls, sub):
-        """If the dynamic parent subclasses an abc, the result __subclasscheck__
-        would fail against the original base class.
+        """If the dynamic parent subclasses an abc (like UserList), the result
+        __subclasscheck__ would fail against the original base class.
 
         I think this is because our calculated class's __subclasscheck__ would rely on
         ._abc_impl being implemented correctly on the immediate parent class, which is
@@ -306,7 +320,7 @@ class DeepCollection(metaclass=DynamicSubclasser):
         try:
             return self[item]
         except (KeyError, IndexError, TypeError):
-            raise AttributeError(f"DeepCollection has no attr {item}")
+            raise AttributeError(f"'DeepCollection' object has no attribute '{item}'")
 
     def __getitem__(self, path):
         def get_raw():
@@ -354,9 +368,18 @@ class DeepCollection(metaclass=DynamicSubclasser):
             return default
 
     def paths_to_field(self, field):
+        """
+        >>> list(DeepCollection([{"x": {"y": "value", "z": {"y": "asdf"}}}]).paths_to_field("y"))
+        [[0, 'x', 'y'], [0, 'x', 'z', 'y']]
+        """
         yield from paths_to_field(self, field)
 
     def values_for_field(self, field):
+        """
+        >>> dc = DeepCollection([{"x": {"y": "v", "z": {"y": "v"}}, "y": {1: 2}}], return_deep=False)
+        >>> list(dc.values_for_field("y"))
+        ['v', 'v', {1: 2}]
+        """
         yield from values_for_field(self, field)
 
     def deduped_values_for_field(self, field):
