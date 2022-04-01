@@ -116,9 +116,19 @@ def paths_to_field(obj, field, current=None):
     [['x', 2, 'y']]
     >>> list(paths_to_field([{"x": {"y": "value", "z": {"y": "asdf"}}}], "y"))
     [[0, 'x', 'y'], [0, 'x', 'z', 'y']]
+    >>> # compound field
+    >>> list(paths_to_field([{"x": {"y": "value", "z": {"y": "asdf"}}}], ["x", "y"]))
+    [[0, 'x', 'y']]
+    >>> list(paths_to_field({"x": {"y": "value"}}, ["y"]))
+    [['x', 'y']]
     """
     if current is None:
         current = []
+
+    if not _can_be_deep(obj):
+        raise TypeError(
+            f"First argument must be able to be deep, not type '{type(obj)}'"
+        )
 
     # field is compound
     if _can_be_deep(field):
