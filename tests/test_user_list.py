@@ -3,7 +3,13 @@ from collections import UserList
 import pytest
 
 from deep_collection import DeepCollection
+from tests.conftest import BaseSequence
 from tests.shared import mutable_sequence_tests
+
+
+class TestUserList(BaseSequence):
+    def setup_method(self):
+        self.obj = UserList(["nested", UserList(["thing", "spam"])])
 
 
 @pytest.fixture(scope="function")

@@ -216,16 +216,16 @@ class DynamicSubclasser(type):
             new_cls = type(cls.__name__, (cls, dynamic_parent_cls), {})
 
         # Create the instance and initialize it with the given object.
-        # Sets obj in instance for immutables like `tuple`
+        # Sets obj in instance for immutables like tuple
         # instance = new_cls.__new__(new_cls, obj, *args, **kwargs)
         instance = new_cls.__new__(new_cls, obj, *args, **kwargs)
-        # Sets obj in instance for mutables like `list`
+        # Sets obj in instance for mutables like list
         instance.__init__(obj, *args, **kwargs)
 
         return instance
 
     def __instancecheck__(cls, inst):
-        """If the dynamic parent subclasses an abc (like UserList), the result
+        """If the dynamic parent subclasses an abc like UserList, the result
         __instancecheck__ would fail against the original base class.
 
         I think this is because our calculated class's __instancecheck__ would rely on
@@ -237,7 +237,7 @@ class DynamicSubclasser(type):
         return any(cls.__subclasscheck__(c) for c in {type(inst), inst.__class__})
 
     def __subclasscheck__(cls, sub):
-        """If the dynamic parent subclasses an abc (like UserList), the result
+        """If the dynamic parent subclasses an abc like UserList, the result
         __subclasscheck__ would fail against the original base class.
 
         I think this is because our calculated class's __subclasscheck__ would rely on
@@ -261,11 +261,11 @@ class DeepCollection(metaclass=DynamicSubclasser):
     def __init__(self, obj, *args, return_deep=True, **kwargs):
         # This often sets the original value for `self` for mutable types.
         # I.e. it gives a new list its content.
-        # Immutables like tuples often already have the base class set via __new__.
+        # Immutables like tuple often already have the base class set via __new__.
 
         try:
             super().__init__(obj, *args, **kwargs)
-        except TypeError:  # self is immutable - like a tuple
+        except TypeError:  # self is immutable like tuple
             pass
         except AttributeError as e:
             # NOTE: compat - dotty_dict
@@ -287,20 +287,27 @@ class DeepCollection(metaclass=DynamicSubclasser):
             else:  # We have Dotty available, but that's not obj.
                 raise e
 
-        # self._obj is never meant to be set except from self because we can't
-        # easily update self if self._obj changes.
-        self._obj = obj
+        # Record the original object. Useful to avoid unnecessary, costly DC instantiation.
+        # __getattribute__ override keeps this in sync with self
+        # when self mutates, as in list.append.
+
+        if hasattr(obj, "_obj") and isinstance(obj, DeepCollection):
+            # A DC made from a DC should still record the real original object.
+            self._obj = obj._obj
+        else:
+            self._obj = obj
 
         self.return_deep = return_deep
 
+    # Unique private methods
     def _ensure_post_call_sync(self, method):
         """Wrap any method to ensure that if if mutates self,
-        self.obj is mutated to match. Inherited methods like list's `append` would act on
-        self, but we also rely on composistion, so self.obj needs to be kept in sync.
+        self._obj is mutated to match. Inherited methods like list's `append` would act
+        on self, but we also rely on composistion, so self._obj needs to be kept in sync.
 
         This decorator, used in __getattribute__, allows us to passively catch such
         cases without having to know ahead of time what these methods are. This gives
-        us more generality, and also let's us not have to include such methods in this
+        us more generality, and also lets us not have to include such methods in this
         class. We also don't want an e.g. `append` here unless the parent has it.
         """
 
@@ -313,11 +320,17 @@ class DeepCollection(metaclass=DynamicSubclasser):
 
         return wrapped
 
+    # Common private methods
     def __getattribute__(self, name):
         """Overridden to ensure self._obj stays in sync with self if self mutates
         from an inherited method being called.
 
-        See self._ensure_post_call_sync
+        See self._ensure_post_call_sync docstring for details.
+
+        >>> dc = DeepCollection([1])
+        >>> dc.append(2)  # list method that normaly just changes self
+        >>> dc._obj
+        [1, 2]
         """
         if name not in dir(DeepCollection) and name in dir(self):
             method = object.__getattribute__(self, name)
@@ -330,7 +343,9 @@ class DeepCollection(metaclass=DynamicSubclasser):
         try:
             return self[item]
         except (KeyError, IndexError, TypeError):
-            raise AttributeError(f"'DeepCollection' object has no attribute '{item}'")
+            raise AttributeError(
+                f"'DeepCollection' object, instance of '{type(self._obj)}', has no attribute '{item}'. "
+            )
 
     def __getitem__(self, path):
         def get_raw():
@@ -371,12 +386,14 @@ class DeepCollection(metaclass=DynamicSubclasser):
     def __repr__(self):
         return f"DeepCollection({super().__repr__()})"
 
+    # Common public methods
     def get(self, path, default=None):
         try:
             return self.__getitem__(path)
         except (KeyError, IndexError, TypeError):
             return default
 
+    # Unique public methods
     def paths_to_field(self, field):
         """
         >>> list(DeepCollection([{"x": {"y": "value", "z": {"y": "asdf"}}}]).paths_to_field("y"))
