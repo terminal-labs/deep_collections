@@ -32,14 +32,13 @@ class BaseTests(ABC):
 
     def test_composition(self, dc):
         assert dc._obj == self.obj
-        assert type(dc._obj) == type(self.obj)
+        assert type(dc._obj) == type(self.obj)  # noqa: E721
 
     def test_reinitialization(self, dc):
         """Can we make a DC from a DC?"""
         new_dc = DeepCollection(dc)
         assert new_dc == dc
-        assert type(new_dc._obj) == type(self.obj)
-        # assert type(new_dc) == type(dc)
+        assert type(new_dc._obj) == type(self.obj)  # noqa: E721
 
     def test_subclass(self):
         class Foo(DeepCollection):

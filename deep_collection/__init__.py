@@ -55,14 +55,60 @@ def del_by_path(obj, path):
     del get_by_path(obj, path[:-1])[path[-1]]
 
 
-def get_by_path(obj, path):
+def get_by_path_strict(obj, path):
     """Access a nested object in obj by iterable path.
     from https://stackoverflow.com/a/14692747/913080
+
+    This function is provided as a faster alternative to get_by_path
+    that offers no glob features.
 
     >>> obj = {"a": ["b", {"c": "d"}]}
     >>> get_by_path(obj, ["a", 1, "c"])
     'd'
     """
+    return reduce(operator.getitem, path, obj)
+
+
+def get_by_path(obj, path):
+    """Access a nested object in obj by iterable path.
+    The path may contain glob wildcards:
+
+    *: matches any number of path fragments
+    ?: matches a single step in a path only
+    []: matches character classes and ranges, e.g. [ABC], [A-Z,0-9], [A\-D]  # noqa: W605
+    !: negates contents of []
+    \: escape *, ?, [, and - and ! inside []  # noqa: W605
+
+    >>> obj = {"a": ["b", {"c": "d"}]}
+    >>> get_by_path(obj, ["a", 1, "c"])
+    'd'
+    """
+    if "*" in path:
+        field_idx = path.index("*") + 1
+        if field_idx == len(path):  # wildcard given at the end of a path
+            path.pop()
+            return get_by_path(obj, path[: field_idx - 1])
+
+        field = path[field_idx]
+        if field == "*":  # back to back wildcards
+            del path[field_idx]
+            return get_by_path(obj, path)
+        paths = list(paths_to_field(obj, path[field_idx]))
+        # keep only paths that match what's before the wildcard
+        paths = [p for p in paths if p[: field_idx - 1] == path[: field_idx - 1]]
+        rv = []
+
+        for subpath in paths:
+            if "*" in subpath:
+                middle = subpath.index("*") + 1
+                front = subpath[:middle]
+                back = subpath[middle:]
+                res = get_by_path(reduce(operator.getitem, front, obj), back)
+            else:
+                full_path = subpath + path[field_idx + 1 :]
+                res = get_by_path(obj, full_path)
+            rv.append(res)
+        return rv[0] if len(rv) == 1 else rv
     return reduce(operator.getitem, path, obj)
 
 
