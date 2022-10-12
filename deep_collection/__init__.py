@@ -16,10 +16,13 @@ def _stringlike(obj):
 
 
 def _can_be_deep(obj):
-    """Determine if an object could be a nested collection.
+    """Guess if an object could be a nested collection.
 
     The general heuristic is that an object must be iterable, but not stringlike
     so that an element can be arbitrary, like another collection.
+
+    Since this is a simple check, there are false positives, but this works with
+    basic types.
     >>> _can_be_deep([1])
     True
     >>> _can_be_deep({1:2})
@@ -203,17 +206,39 @@ class DynamicSubclasser(type):
         else:
             obj = {}
 
-        dynamic_parent_cls = type(obj)
-
-        # Make a new_cls that inherits from the dynamic_parent_cls, and resolving
-        # potential metaclass conflicts if the dynamic_parent_cls doesn't already
-        # use this metaclass.
-        mcls = type(cls)
-        if isinstance(dynamic_parent_cls, mcls):
-            new_cls = type(cls.__name__, (dynamic_parent_cls,), {})
+        # If a DC is given, we must use the original type as the parent_cls. We don't
+        # want or need to nest DC types, and we if we don't flattten the inheritence
+        # we get a metaclass conflict can't produce a consistent method resolution.
+        if hasattr(obj, "_obj") and isinstance(obj, DeepCollection):
+            dynamic_parent_cls = type(obj._obj)
         else:
-            cls.__class__ = type(mcls.__name__, (mcls, type(dynamic_parent_cls)), {})
-            new_cls = type(cls.__name__, (cls, dynamic_parent_cls), {})
+            dynamic_parent_cls = type(obj)
+
+        # Make a new_cls that inherits from the dynamic_parent_cls, and resolve any
+        # potential metaclass conflicts, like when the object has its own metaclass
+        # already, as when it's an ABC.
+        try:
+            # Resultant type is deep_collection.DeepCollection_[type]
+            new_cls = type(
+                f"{cls.__name__}_{dynamic_parent_cls.__name__}",
+                (cls, dynamic_parent_cls),
+                {},
+            )
+        except TypeError:
+            # Resolve metaclass conflict.
+            # Create a new metaclass on the fly, merging the two we have.
+            mcls = type(cls)
+            cls.__class__ = type(
+                f"{mcls.__name__}_{dynamic_parent_cls.__name__}",
+                (mcls, type(dynamic_parent_cls)),
+                {},
+            )
+            # Resultant type is likely abc.DeepCollection_[type]
+            new_cls = type(
+                f"{cls.__name__}_{dynamic_parent_cls.__name__}",
+                (cls, dynamic_parent_cls),
+                {},
+            )
 
         # Create the instance and initialize it with the given object.
         # Sets obj in instance for immutables like tuple
@@ -259,12 +284,26 @@ class DeepCollection(metaclass=DynamicSubclasser):
     """
 
     def __init__(self, obj, *args, return_deep=True, **kwargs):
+        # Set instance vars first in case anything else (like super().__init__) accesses
+        # methods that trigger our __getattribute__, which needs them present.
+        #
+        # Record the original object. Useful to avoid unnecessary, costly DC instantiation.
+        # __getattribute__ override keeps this in sync with self
+        # when self mutates, as in list.append.
+        if hasattr(obj, "_obj") and isinstance(obj, DeepCollection):
+            # A DC made from a DC should still record the real original object.
+            self._obj = obj._obj
+        else:
+            self._obj = obj
+
+        self.original_type = type(self._obj)
+        self.return_deep = return_deep
+
         # This often sets the original value for `self` for mutable types.
         # I.e. it gives a new list its content.
         # Immutables like tuple often already have the base class set via __new__.
-
         try:
-            super().__init__(obj, *args, **kwargs)
+            super().__init__(self._obj, *args, **kwargs)
         except TypeError:  # self is immutable like tuple
             pass
         except AttributeError as e:
@@ -282,22 +321,10 @@ class DeepCollection(metaclass=DynamicSubclasser):
             except ModuleNotFoundError:
                 raise e
 
-            if isinstance(obj, Dotty):
-                super().__init__(obj.to_dict(), *args, **kwargs)
+            if isinstance(self._obj, Dotty):
+                super().__init__(self._obj.to_dict(), *args, **kwargs)
             else:  # We have Dotty available, but that's not obj.
                 raise e
-
-        # Record the original object. Useful to avoid unnecessary, costly DC instantiation.
-        # __getattribute__ override keeps this in sync with self
-        # when self mutates, as in list.append.
-
-        if hasattr(obj, "_obj") and isinstance(obj, DeepCollection):
-            # A DC made from a DC should still record the real original object.
-            self._obj = obj._obj
-        else:
-            self._obj = obj
-
-        self.return_deep = return_deep
 
     # Unique private methods
     def _ensure_post_call_sync(self, method):
@@ -313,10 +340,13 @@ class DeepCollection(metaclass=DynamicSubclasser):
 
         @wraps(method)
         def wrapped(*args, **kwargs):
-            result = method(*args, **kwargs)
+            rv = method(*args, **kwargs)  # may set self and not _obj
+
+            # sync
             if self._obj != self:
                 self._obj = type(self._obj)(self)
-            return result
+
+            return rv
 
         return wrapped
 
@@ -332,9 +362,14 @@ class DeepCollection(metaclass=DynamicSubclasser):
         >>> dc._obj
         [1, 2]
         """
-        if name not in dir(DeepCollection) and name in dir(self):
+        if (
+            not name.startswith("_")
+            and name not in dir(DeepCollection)
+            and name in dir(self)
+        ):
             method = object.__getattribute__(self, name)
-            if callable(method) and not name.startswith("_"):
+            if callable(method):
+                # wrapped
                 return self._ensure_post_call_sync(method)
         return object.__getattribute__(self, name)
 
@@ -384,7 +419,13 @@ class DeepCollection(metaclass=DynamicSubclasser):
             self._obj[path] = value
 
     def __repr__(self):
-        return f"DeepCollection({super().__repr__()})"
+        super_repr = super().__repr__()
+        # Some collections types already display self when self isn't the original type,
+        # but that's actually not what we want here, so if we find that, fix it.
+        super_repr = super_repr.replace(
+            self.__class__.__name__, self.original_type.__name__
+        )
+        return f"DeepCollection({super_repr})"
 
     # Common public methods
     def get(self, path, default=None):
@@ -392,6 +433,10 @@ class DeepCollection(metaclass=DynamicSubclasser):
             return self.__getitem__(path)
         except (KeyError, IndexError, TypeError):
             return default
+
+    def items(self, *args, **kwargs):
+        # XXX what about when it doesn't exist?
+        return super().items(*args, **kwargs)
 
     # Unique public methods
     def paths_to_field(self, field):
