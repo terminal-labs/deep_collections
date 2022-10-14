@@ -69,7 +69,7 @@ def get_by_path_strict(obj, path):
     return reduce(operator.getitem, path, obj)
 
 
-def get_by_path(obj, path):
+def get_by_path(obj, path: list):
     """Access a nested object in obj by iterable path.
     The path may contain glob wildcards:
 
@@ -442,7 +442,7 @@ class DeepCollection(metaclass=DynamicSubclasser):
             except TypeError:
                 return self._obj[path]
 
-            return get_by_path(self._obj, path)
+            return get_by_path(self._obj, list(path))
 
         rv = get_raw()
 

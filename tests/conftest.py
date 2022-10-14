@@ -200,6 +200,13 @@ class MappingTests(MutableTests):
         assert isinstance(dc["nested"], type(self.obj))
         assert isinstance(dc["nested"], DeepCollection)
 
+    def test_getitem_glob(self):
+        dc = DeepCollection({"a": {"b": {"d": 5}}, "d": 4})
+        assert dc["*", "d"] == [5, 4]
+
+        assert isinstance(dc["*", "d"], list)
+        assert isinstance(dc["*", "d"], DeepCollection)
+
     def test_get(self, dc):
         assert dc.get("nested") == self.obj["nested"]
         assert dc.get(["nested", "thing"]) == "spam"
