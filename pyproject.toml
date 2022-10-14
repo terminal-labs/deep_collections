@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "deep_collection"
-version = "0.1.0b1"
+version = "0.2.0b1"
 authors = ["Joseph Nix <nixjdm@terminallabs.com>"]
 classifiers=[
     'Intended Audience :: Developers',
