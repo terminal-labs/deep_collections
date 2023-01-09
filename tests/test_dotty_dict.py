@@ -3,7 +3,7 @@ import pytest
 from dotty_dict import Dotty
 from dotty_dict import dotty
 
-from deep_collection import DeepCollection
+from deep_collections import DeepCollection
 
 
 def test_instantiation():

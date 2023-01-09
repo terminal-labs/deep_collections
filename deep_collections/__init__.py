@@ -1,6 +1,8 @@
 import operator
+from fnmatch import fnmatchcase
 from functools import reduce
 from functools import wraps
+from itertools import chain
 
 
 def _stringlike(obj):
@@ -15,7 +17,7 @@ def _stringlike(obj):
     return any(isinstance(obj, base) for base in (str, bytes, bytearray))
 
 
-def _can_be_deep(obj):
+def _non_stringlike_iterable(obj):  # TODO rename to _non_stringlike_iterable
     """Guess if an object could be a nested collection.
 
     The general heuristic is that an object must be iterable, but not stringlike
@@ -23,13 +25,13 @@ def _can_be_deep(obj):
 
     Since this is a simple check, there are false positives, but this works with
     basic types.
-    >>> _can_be_deep([1])
+    >>> _non_stringlike_iterable([1])
     True
-    >>> _can_be_deep({1:2})
+    >>> _non_stringlike_iterable({1:2})
     True
-    >>> _can_be_deep(1)
+    >>> _non_stringlike_iterable(1)
     False
-    >>> _can_be_deep("a")
+    >>> _non_stringlike_iterable("a")
     False
     """
     try:
@@ -52,10 +54,10 @@ def del_by_path(obj, path):
     >>> obj
     {'a': [{'c': 'd'}]}
     """
-    del get_by_path(obj, path[:-1])[path[-1]]
+    del getitem_by_path(obj, path[:-1])[path[-1]]
 
 
-def get_by_path_strict(obj, path):
+def getitem_by_path_strict(obj, path):
     """Access a nested object in obj by iterable path.
     from https://stackoverflow.com/a/14692747/913080
 
@@ -63,53 +65,174 @@ def get_by_path_strict(obj, path):
     that offers no glob features.
 
     >>> obj = {"a": ["b", {"c": "d"}]}
-    >>> get_by_path(obj, ["a", 1, "c"])
+    >>> getitem_by_path(obj, ["a", 1, "c"])
     'd'
     """
     return reduce(operator.getitem, path, obj)
 
 
-def get_by_path(obj, path: list):
+def get_by_path_strict(obj, path, default=None):
     """Access a nested object in obj by iterable path.
-    The path may contain glob wildcards:
+    from https://stackoverflow.com/a/14692747/913080
 
-    *: matches any number of path fragments
-    ?: matches a single step in a path only
-    []: matches character classes and ranges, e.g. [ABC], [A-Z,0-9], [A\-D]  # noqa: W605
-    !: negates contents of []
-    \: escape *, ?, [, and - and ! inside []  # noqa: W605
+    This function is provided as a faster alternative to get_by_path
+    that offers no glob features.
+
+    As with the standard dict.get, this returns an optional default or None
+    rather than a KeyError.
 
     >>> obj = {"a": ["b", {"c": "d"}]}
-    >>> get_by_path(obj, ["a", 1, "c"])
+    >>> get_by_path_strict(obj, ["a", 1, "c"])
     'd'
+    >>> get_by_path_strict(obj, ["a", 1, "e"])
+
+    >>> get_by_path_strict(obj, ["a", 1, "e"], "x")
+    'x'
     """
-    if "*" in path:
-        field_idx = path.index("*") + 1
-        if field_idx == len(path):  # wildcard given at the end of a path
-            path.pop()
-            return get_by_path(obj, path[: field_idx - 1])
+    try:
+        return reduce(operator.getitem, path, obj)
+    except KeyError:
+        return default
 
-        field = path[field_idx]
-        if field == "*":  # back to back wildcards
-            del path[field_idx]
-            return get_by_path(obj, path)
-        paths = list(paths_to_field(obj, path[field_idx]))
-        # keep only paths that match what's before the wildcard
-        paths = [p for p in paths if p[: field_idx - 1] == path[: field_idx - 1]]
-        rv = []
 
-        for subpath in paths:
-            if "*" in subpath:
-                middle = subpath.index("*") + 1
-                front = subpath[:middle]
-                back = subpath[middle:]
-                res = get_by_path(reduce(operator.getitem, front, obj), back)
+def _match(a, b):
+    try:
+        return fnmatchcase(a, b)
+    except TypeError:  # fallback to normal eq
+        return a == b
+
+
+def _simplify_double_splats(path):
+    """Return an equivalent path, removing any unnecessary double splats."""
+    # remove ending "**"
+    while True:
+        if path and path[-1] == "**":
+            del path[-1]
+        else:
+            break
+
+    # Collapse consecutive "**"
+    i = 0
+    while i < len(path) - 1:
+        if path[i] == "**" == path[i + 1]:
+            del path[i]
+        else:
+            i = i + 1
+
+    return path
+
+
+def resolve_path(obj, path, recursive_match_all=True):
+    """Yield all paths that match the given globbed path."""
+    # Raise clear error early if path isn't iterable
+    iter(path)
+
+    if recursive_match_all and "**" in path:
+        path = _simplify_double_splats(path)
+
+    if recursive_match_all and "**" in path:
+        # '**' can match any a path fragment of any length, including 0.
+        double_splat_idx = path.index("**") + 1
+
+        path_start = path[: double_splat_idx - 1]
+        path_end = path[double_splat_idx:]
+
+        if path_start:
+            paths = list(resolve_path(obj, path_start))
+            for p in paths:
+                path_ends = list(paths_to_key(getitem_by_path_strict(obj, p), path_end))
+                for end in path_ends:
+                    yield p + end
+        else:  # path started with "**"
+            path_ends = list(paths_to_key(obj, path_end))
+            yield from path_ends
+    elif path:
+        first_step = path[0]
+        path_remainder = path[1:]
+
+        keys = matched_keys(obj, first_step)
+
+        if path_remainder:
+            for key in keys:
+                sub_obj = obj[key]
+                smk = matched_keys(sub_obj, path_remainder[0])
+                if smk:
+                    yv = ([key] + sk for sk in resolve_path(sub_obj, path_remainder))
+                    yield from yv
+        else:
+            yield from ([key] for key in keys)
+
+
+def matched_keys(obj, key):
+    """
+    >>> matched_keys(1, '0')
+    []
+    >>> matched_keys([1], '0')
+    []
+    >>> matched_keys([1], 0)
+    [0]
+    >>> matched_keys({'a': 1} , 0)
+    []
+    >>> matched_keys({'a': 1} , 'a')
+    ['a']
+    >>> matched_keys({'a': 1} , '?')
+    ['a']
+    >>> matched_keys({'ab': 1, 'cde': 2} , '*')
+    ['ab', 'cde']
+    """
+    rv = []
+
+    try:
+        iter(obj)
+    except TypeError:
+        return rv
+
+    try:
+        for k in obj.keys():
+            if patterned(key):
+                if k == key or match_glob(str(k), key):
+                    rv.append(k)
             else:
-                full_path = subpath + path[field_idx + 1 :]
-                res = get_by_path(obj, full_path)
-            rv.append(res)
-        return rv[0] if len(rv) == 1 else rv
-    return reduce(operator.getitem, path, obj)
+                if k == key or match_glob(k, key):
+                    rv.append(k)
+    except AttributeError:
+        for idx in range(len(obj)):
+            if patterned(key):
+                if idx == key or match_glob(str(idx), key):
+                    rv.append(idx)
+            else:
+                if idx == key or match_glob(idx, key):
+                    rv.append(idx)
+    return rv
+
+
+def match_glob(a, b):
+    try:
+        return fnmatchcase(a, b)
+    except TypeError:  # e.g. b could be an int - not a match
+        False
+
+
+# rename to indicate globbing
+# move into class?
+def patterned(txt):
+    return _stringlike(txt) and any(char in txt for char in ("*", "?", "["))
+
+
+def getitem_by_path(obj, path: list):
+    paths = list(resolve_path(obj, path))
+
+    if len(paths) > 1:
+        return [getitem_by_path_strict(obj, p) for p in paths]
+    elif len(paths) == 1:
+        return getitem_by_path_strict(obj, paths[0])
+
+    # Check if any part of the path appears to use a pattern. If so, return an empty
+    # list, rather than a KeyError/IndexError because 0 matched results.
+    if any(patterned(p) for p in path):
+        return paths
+
+    return getitem_by_path_strict(obj, path)
 
 
 def set_by_path(obj, path, value):
@@ -134,7 +257,8 @@ def set_by_path(obj, path, value):
 
     traversed = []
     for part in path:
-        branch = get_by_path(obj, traversed)
+        # branch = get_by_path(obj, [part])
+        branch = getitem_by_path(obj, traversed)
         traversed.append(part)
 
         try:
@@ -146,75 +270,133 @@ def set_by_path(obj, path, value):
             branch[part] = value
 
 
-def paths_to_field(obj, field, current=None):
-    """Return the path to a specified field and the associated value. This is useful to
-    determin what is using e.g. "password".
+def paths_to_key(obj, key, current=None):
+    """Return the path to a specified key in an object.
+    A key may be simple or iterable, e.g. a str, int, list, dict, etc, as long as it
+    can be used with one of the supported pattern matches,
+    or supports an equality test.
 
-    Because this can handle a generalized config, which can have lists in it, this can
-    also handle a list of all configs.
-
-    >>> list(paths_to_field({"x": "value"}, "x"))
+    >>> list(paths_to_key({"x": "value"}, "x"))
     [['x']]
-    >>> list(paths_to_field({"x": {"y": "value"}}, "y"))
+    >>> list(paths_to_key({"x": {"y": "value"}}, "y"))
     [['x', 'y']]
-    >>> list(paths_to_field(["value"], "x"))
+    >>> list(paths_to_key(["value"], "x"))
     []
-    >>> list(paths_to_field([{"x": "value"}], "x"))
+    >>> list(paths_to_key([{"x": "value"}], "x"))
     [[0, 'x']]
-    >>> list(paths_to_field({"x": ["a", "b", {"y": "value"}]}, "y"))
+    >>> list(paths_to_key({"x": ["a", "b", {"y": "value"}]}, "y"))
     [['x', 2, 'y']]
-    >>> list(paths_to_field([{"x": {"y": "value", "z": {"y": "asdf"}}}], "y"))
+    >>> list(paths_to_key([{"x": {"y": "value", "z": {"y": "asdf"}}}], "y"))
     [[0, 'x', 'y'], [0, 'x', 'z', 'y']]
-    >>> # compound field
-    >>> list(paths_to_field([{"x": {"y": "value", "z": {"y": "asdf"}}}], ["x", "y"]))
-    [[0, 'x', 'y']]
-    >>> list(paths_to_field({"x": {"y": "value"}}, ["y"]))
+    >>> # compound keys
+    >>> list(paths_to_key({"x": {"y": "value"}}, ["x", "y"]))
     [['x', 'y']]
+    >>> list(paths_to_key([{"x": {"y": "value", "z": {"y": "asdf"}}}], ["x", "y"]))
+    [[0, 'x', 'y']]
+    >>> list(paths_to_key({"x": {"y": "value"}}, "y"))
+    [['x', 'y']]
+    >>> list(paths_to_key({"x": 0}, ["y"]))
+    []
     """
     if current is None:
         current = []
 
-    if not _can_be_deep(obj):
+    if not _non_stringlike_iterable(obj):
         raise TypeError(
             f"First argument must be able to be deep, not type '{type(obj)}'"
         )
 
-    # field is compound
-    if _can_be_deep(field):
+    compound_key = _non_stringlike_iterable(key)
+    if compound_key and len(key) > 1:
+        resolved_paths = list(resolve_path(obj, key))
+        if resolved_paths:
+            for key in resolved_paths:
+                yield current + key
+        else:
+            try:
+                for k, v in obj.items():
+                    if _non_stringlike_iterable(v):
+                        yield from paths_to_key(v, key, current + [k])
+            except AttributeError:
+                for idx, i in enumerate(obj):
+                    if _non_stringlike_iterable(i):
+                        yield from paths_to_key(i, key, current + [idx])
+    elif compound_key:
+        for k in key:  # Only iterates once, but works for dict or list-like keys
+            yield from paths_to_key(obj, k)
+    else:  # key is simple; str, int, float, etc.
         try:
-            get_by_path(obj, field)
+            for k, v in obj.items():
+                if _non_stringlike_iterable(v):
+                    yield from paths_to_key(v, key, current + [k])
+                if _match(k, key):
+                    yield current + [k]
+        except AttributeError:  # no .items
+            for idx, v in enumerate(obj):
+                if _non_stringlike_iterable(v):
+                    yield from paths_to_key(v, key, current + [idx])
+                elif _match(idx, key):
+                    yield current + [idx]
+
+
+def paths_to_value(obj, value, current=None):
+    """Return the path to a specified value in an object.
+    A value may be simple or iterable, e.g. a str, int, list, dict, etc, as long as it
+    can be used with one of the supported pattern matches,
+    or supports an equality test.
+
+    >>> list(paths_to_value({"x": "value"}, "value"))
+    [['x']]
+    >>> list(paths_to_value(["value"], "value"))
+    [[0]]
+    """
+    if current is None:
+        current = []
+
+    if not _non_stringlike_iterable(obj):
+        raise TypeError(
+            f"First argument must be able to be deep, not type '{type(obj)}'"
+        )
+
+    if _match(obj, value):
+        yield current
+    elif _non_stringlike_iterable(value):  # e.g. list, dict. Can be another path
+        try:
+            gbp = getitem_by_path(obj, value)
         except (KeyError, IndexError, TypeError):
             try:
                 for k, v in obj.items():
-                    yield from paths_to_field(v, field, current + [k])
-            except AttributeError:  # no .items
+                    if _non_stringlike_iterable(v):
+                        yield from paths_to_value(v, value, current + [k])
+            except AttributeError:
                 for idx, i in enumerate(obj):
-                    yield from paths_to_field(i, field, current + [idx])
+                    if _non_stringlike_iterable(i):
+                        yield from paths_to_value(i, value, current + [idx])
         else:
-            yield current + list(field)
-    else:  # field is simple; str, int, float, etc.
+            yield current + list(value)
+    else:  # value is simple; str, int, float, etc.
         try:
             for k, v in obj.items():
-                if k == field:
+                if _non_stringlike_iterable(v):
+                    yield from paths_to_value(v, value, current + [k])
+                if _match(v, value):
                     yield current + [k]
-                if _can_be_deep(v):
-                    yield from paths_to_field(v, field, current + [k])
         except AttributeError:  # no .items
             for idx, i in enumerate(obj):
-                if i == field:
+                if _non_stringlike_iterable(i):
+                    yield from paths_to_value(i, value, current + [idx])
+                elif _match(i, value):
                     yield current + [idx]
-                if _can_be_deep(i):
-                    yield from paths_to_field(i, field, current + [idx])
 
 
-def values_for_field(obj, field):
-    """Generate all values for a given field.
+def values_for_key(obj, key):
+    """Generate all values for a given key.
 
-    >>> list(values_for_field([{"x": {"y": "value", "z": {"y": "value"}}, "y": {1: 2}}], "y"))
+    >>> list(values_for_key([{"x": {"y": "value", "z": {"y": "value"}}, "y": {1: 2}}], "y"))
     ['value', 'value', {1: 2}]
     """
-    for path in paths_to_field(obj, field):
-        yield get_by_path(obj, path)
+    for path in paths_to_key(obj, key):
+        yield getitem_by_path(obj, path)
 
 
 def deduped_items(items):
@@ -226,7 +408,6 @@ def deduped_items(items):
     >>> deduped_items([{1:{2:{3:4}}}, {1:{2:{3:4}}}, {1:{2:{3:7}}}])
     [{1: {2: {3: 4}}}, {1: {2: {3: 7}}}]
     """
-
     try:
         return list(set(items))
     except TypeError:
@@ -264,7 +445,7 @@ class DynamicSubclasser(type):
         # potential metaclass conflicts, like when the object has its own metaclass
         # already, as when it's an ABC.
         try:
-            # Resultant type is deep_collection.DeepCollection_[type]
+            # Resultant type is deep_collections.DeepCollection_[type]
             new_cls = type(
                 f"{cls.__name__}_{dynamic_parent_cls.__name__}",
                 (cls, dynamic_parent_cls),
@@ -442,23 +623,23 @@ class DeepCollection(metaclass=DynamicSubclasser):
             except TypeError:
                 return self._obj[path]
 
-            return get_by_path(self._obj, list(path))
+            return getitem_by_path(self._obj, path)
 
         rv = get_raw()
 
-        if _can_be_deep(rv) and self.return_deep:
+        if _non_stringlike_iterable(rv) and self.return_deep:
             return DeepCollection(rv)
         return rv
 
     def __delitem__(self, path):
-        if _can_be_deep(path):
+        if _non_stringlike_iterable(path):
             del_by_path(self, path)
         else:
             super().__delitem__(path)
             del self._obj[path]
 
     def __setitem__(self, path, value):
-        if _can_be_deep(path):
+        if _non_stringlike_iterable(path):
             set_by_path(self, path, value)
         else:
             super().__setitem__(path, value)
@@ -485,27 +666,27 @@ class DeepCollection(metaclass=DynamicSubclasser):
         return super().items(*args, **kwargs)
 
     # Unique public methods
-    def paths_to_field(self, field):
+    def paths_to_key(self, key):
         """
-        >>> list(DeepCollection([{"x": {"y": "value", "z": {"y": "asdf"}}}]).paths_to_field("y"))
+        >>> list(DeepCollection([{"x": {"y": "value", "z": {"y": "asdf"}}}]).paths_to_key("y"))
         [[0, 'x', 'y'], [0, 'x', 'z', 'y']]
         """
-        yield from paths_to_field(self, field)
+        yield from paths_to_key(self, key)
 
-    def values_for_field(self, field):
+    def values_for_key(self, key):
         """
         >>> dc = DeepCollection([{"x": {"y": "v", "z": {"y": "v"}}, "y": {1: 2}}], return_deep=False)
-        >>> list(dc.values_for_field("y"))
+        >>> list(dc.values_for_key("y"))
         ['v', 'v', {1: 2}]
         """
-        yield from values_for_field(self, field)
+        yield from values_for_key(self, key)
 
-    def deduped_values_for_field(self, field):
+    def deduped_values_for_key(self, key):
         """
         >>> dc = DeepCollection([{"x": {"y": "v", "z": {"y": "v"}}, "y": {1: 2}}], return_deep=False)
-        >>> 'v' in dc.deduped_values_for_field("y")  # order not gaurunteed
+        >>> 'v' in dc.deduped_values_for_key("y")  # order not gaurunteed
         True
-        >>> {1: 2} in dc.deduped_values_for_field("y")  # order not gaurunteed
+        >>> {1: 2} in dc.deduped_values_for_key("y")  # order not gaurunteed
         True
         """
-        return deduped_items(list(values_for_field(self, field)))
+        return deduped_items(list(values_for_key(self, key)))

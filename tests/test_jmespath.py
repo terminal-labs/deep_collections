@@ -1,6 +1,6 @@
 import jmespath
 
-from deep_collection import DeepCollection
+from deep_collections import DeepCollection
 
 
 def test_search():

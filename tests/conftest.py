@@ -1,10 +1,14 @@
+import inspect
 from abc import ABC
 from abc import abstractmethod
 from copy import deepcopy
+from functools import wraps
 
 import pytest
 
-from deep_collection import DeepCollection
+from .parameters import getitem_dict_tests
+from .parameters import getitem_list_tests
+from deep_collections import DeepCollection
 
 
 class BaseTests(ABC):
@@ -193,16 +197,24 @@ class MappingTests(MutableTests):
             }
         )
 
-    def test_getitem(self, dc):
-        assert dc["nested"] == self.obj["nested"]
-        assert dc["nested", "thing"] == self.obj["nested"]["thing"]
+    @pytest.mark.parametrize(*getitem_dict_tests)
+    def test_getitem(self, dc, obj, path, result):
+        obj = cast_type_recursive(obj, dict, self._type)
+        result = cast_type_recursive(result, dict, self._type)
+        # cast_dict_obj_res(self._type, obj, path, result)
+        dc = DeepCollection(obj)
 
-        assert isinstance(dc["nested"], type(self.obj))
-        assert isinstance(dc["nested"], DeepCollection)
+        if inspect.isclass(result) and issubclass(result, Exception):
+            with pytest.raises(result):
+                dc[path]
+        else:
+            assert dc[path] == result
+            if self._type != dict:
+                pass
 
     def test_getitem_glob(self):
         dc = DeepCollection({"a": {"b": {"d": 5}}, "d": 4})
-        assert dc["*", "d"] == [5, 4]
+        assert dc["**", "d"] == [5, 4]
 
         assert isinstance(dc["*", "d"], list)
         assert isinstance(dc["*", "d"], DeepCollection)
@@ -266,3 +278,15 @@ class MappingTests(MutableTests):
         del dc["nested"]
         del self.obj["nested"]
         assert dc == self.obj
+
+
+def cast_type_recursive(obj, old_type, new_type):
+    if isinstance(obj, old_type):
+        obj = new_type(obj)
+        try:
+            for k, v in obj.items():
+                obj[k] = cast_type_recursive(v, old_type, new_type)
+        except AttributeError:
+            for idx, v in enumerate(obj):
+                obj[idx] = cast_type_recursive(v, old_type, new_type)
+    return obj
