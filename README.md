@@ -7,7 +7,7 @@ deep_collections is a Python library that provides tooling for easy access to de
 
 Got a bundle of JSON from an API? A large Python object from some data science problem? Some very lengthy set of instructions from some infrastructure as code like Ansible or SaltStack? Explore and modify it with ease.
 
-DeepCollection can take virtually any kind of object including all built-in iterables, everything in the collections module, and [dotty-dicts](https://github.com/pawelzny/dotty_dict), and all of these nested in any fashion.
+DeepCollection can take virtually any kind of object including all built-in container types ([dict](https://docs.python.org/3/library/stdtypes.html#dict), [list](https://docs.python.org/3/library/stdtypes.html#list), [set](https://docs.python.org/3/library/stdtypes.html#set), and [tuple](https://docs.python.org/3/library/stdtypes.html#tuple)), everything in the [collections module](https://docs.python.org/3/library/collections.html), and [dotty-dicts](https://github.com/pawelzny/dotty_dict), and all of these nested in any fashion.
 
 ### Features
 
