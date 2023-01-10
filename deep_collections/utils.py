@@ -8,3 +8,15 @@ def _stringlike(obj):
     False
     """
     return any(isinstance(obj, base) for base in (str, bytes, bytearray))
+
+
+def pathlike(obj):
+    if _stringlike(obj):
+        return False
+
+    try:
+        iter(obj)
+    except TypeError:
+        return False
+
+    return True

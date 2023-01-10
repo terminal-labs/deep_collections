@@ -6,6 +6,7 @@ from itertools import chain
 
 from .matching import match_style
 from .utils import _stringlike
+from .utils import pathlike
 
 
 def _non_stringlike_iterable(obj):  # TODO rename to _non_stringlike_iterable
@@ -190,7 +191,12 @@ def matched_keys(obj, pattern, match_with="glob"):
     return rv
 
 
-def getitem_by_path(obj, path: list, match_with="glob"):
+def getitem_by_path(obj, path, match_with="glob"):
+    if not pathlike(path):  # e.g. str or int
+        if not match_style(match_with).patterned(path):
+            return obj[path]
+        path = [path]
+
     paths = list(resolve_path(obj, path, match_with))
 
     if len(paths) > 1:
@@ -582,22 +588,10 @@ class DeepCollection(metaclass=DynamicSubclasser):
             )
 
     def __getitem__(self, path):
-        def get_raw():
-            # Use self._obj instead of self to avoid unnecessary intermediate
-            # DeepCollections. Just make a final conversion at the end.
+        # Use self._obj instead of self to avoid unnecessary intermediate
+        # DeepCollections. Just make a final conversion at the end.
 
-            # Assume strs aren't supposed to be iterated through.
-            if _stringlike(path):
-                return self._obj[path]
-
-            try:
-                iter(path)
-            except TypeError:
-                return self._obj[path]
-
-            return getitem_by_path(self._obj, path)
-
-        rv = get_raw()
+        rv = getitem_by_path(self._obj, path)
 
         if _non_stringlike_iterable(rv) and self.return_deep:
             return DeepCollection(rv)

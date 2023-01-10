@@ -20,7 +20,7 @@ def safe_fnmatchcase(key, pattern):
 class GlobMatch:
     @staticmethod
     def patterned(txt):
-        return _stringlike(txt) and any(char in txt for char in ("*", "?", "["))
+        return _stringlike(txt) and any(char in txt for char in "*?[")
 
     @staticmethod
     def match(key, pattern):

@@ -1,4 +1,4 @@
-## DeepCollection
+## Deep Collections
 
 [![PyPI version](https://badge.fury.io/py/deep-collections.svg)](https://pypi.org/project/deep-collections/)
 <a href="https://github.com/ambv/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
@@ -12,6 +12,7 @@ DeepCollection can take virtually any kind of object including all built-in iter
 ### Features
 
 - Path traversal by supplying an list of path components as a key. This works for getting, setting, and deleting.
+- Accessing nested components by supply only path fragments.
 - Setting paths when parent parts do not exist.
 - Path traversal through dict-like collections by dot chaining for getting
 - Finding all paths to keys or subpaths
@@ -27,6 +28,73 @@ DeepCollection can take virtually any kind of object including all built-in iter
 DeepCollections has a concept of a "path" for nested collections, where a path is a sequence of keys or indices that if followed in order, traverse the deep collection. As a quick example, `{'a': ['b', {'c': 'd'}]}` could be traversed with the path `['a', 1, 'c']` to find the value `'d'`.
 
 DeepCollections natively use paths as well as simple keys and indices. For `dc = DeepCollection(foo)`, items can be retrieved through the familiar `dc[path]` as normal if `path` is a simple key or index, or if it is an non-stringlike iterable path (strings are assumed to be literal keys). This is done with a custom `__getitem__` method. Similarly, `__delitem__` and `__setitem__` also support using a path. The same flexibility exists for the familiar methods like `.get`, which behaves the same as `dict.get`, but can accept a path as well as a key.
+
+### Matching
+Path elements are interpretted as patterns to match against keys and indices. By default this is feature is on and uses globbing.
+
+#### Matching numeric keys and indicies
+
+To enable pattern matching (like globbing) to make sense when attempting to match indices and numeric keys, if a path element is a string and appears to use globbing, it will be matched against the stringified index/key. In other words
+
+```python
+dc = DeepCollection(["a", "b", "c"])
+dc["[0-1]"] == [0, 1]
+dc["5"] == DeepCollection([])
+
+dc = DeepCollection({1: 'i', '1': 'j', 'a': 'k'})
+dc['*[!1]'] == "k"
+```
+
+This is a compromise to afford pattern matching indices and numeric keys. As with deeper path traversal, since we're matching a pattern, 0 hits is not treated as a KeyError or IndexError, but simply returns no results.
+
+The often relied upon KeyError and IndexError are both saved when pattern matching is not detected.
+
+```python
+dc = DeepCollection(["a", "b", "c"])
+dc[5]
+...
+IndexError: list index out of range
+
+DeepCollection({})["a"]
+KeyError: 'a'
+```
+
+#### Recursion
+
+`"**"` recurses any depth to find the match for the next pattern given. For example:
+
+```python
+dc = DeepCollection({"a": {"b": {"c": {"d": 5}}}, "d": 4})
+dc["a", "**", "d"] == 5
+```
+
+Coupled with another matching style like globbing allows you to do some powerful filtering:
+
+```python
+dc = DeepCollection({"a": {"b": {"c": {"xd": {"e": 0}, "yd": {"e": 1}, "zf": {"e": 2}}}}, "e": 3})
+dc["a", "**", "?d", "e"] == [0, 1]
+```
+
+This feature is independent of other matching patterns. In other words, you could swap globbing out for another matchin style, but `"**"` will remain usable unless disabled on it's own. You might want to use regex through your path but pair that with recursion.
+
+### Matching Styles
+
+Deep Collections supports the following matching styles:
+
+- glob
+- regex (_built in soon_)
+- none (_built in soon_)
+- custom (_built in soon_)
+
+This can be set with many functions by passing e.g. `match_with="regex"`.
+
+As said above, the special use of `"**"` is independant, and currently always on. Future versions will allow toggling this off as well.
+
+To abandon all matching styles and traverse paths as quickly as possible, use `getitem_by_path_strict`.
+
+#### Matching Style: Globbing
+
+Any given path element is matched with `fnmatchcase` from [the Python stdlib](https://docs.python.org/3/library/fnmatch.html#fnmatch.fnmatchcase). This style is used in the above examples.
 
 ### DeepCollection object API
 
