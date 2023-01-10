@@ -1,9 +1,9 @@
 ## DeepCollection
 
-[![PyPI version](https://badge.fury.io/py/deep-collection.svg)](https://pypi.org/project/deep-collection/)
+[![PyPI version](https://badge.fury.io/py/deep-collections.svg)](https://pypi.org/project/deep-collections/)
 <a href="https://github.com/ambv/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
 
-deep_collection is a Python library that provides tooling for easy access to deep collections (dicts, lists, deques, etc), while maintaining a great portion of the collection's original API. The class DeepCollection class will automatically subclass the original collection that is provided, and add several quality of life extensions to make using deep collections much more enjoyable.
+deep_collections is a Python library that provides tooling for easy access to deep collections (dicts, lists, deques, etc), while maintaining a great portion of the collection's original API. The class DeepCollection class will automatically subclass the original collection that is provided, and add several quality of life extensions to make using deep collections much more enjoyable.
 
 Got a bundle of JSON from an API? A large Python object from some data science problem? Some very lengthy set of instructions from some infrastructure as code like Ansible or SaltStack? Explore and modify it with ease.
 
