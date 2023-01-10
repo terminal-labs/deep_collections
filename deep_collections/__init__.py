@@ -124,9 +124,6 @@ def _simplify_double_splats(path):
 
 def resolve_path(obj, path, recursive_match_all=True):
     """Yield all paths that match the given globbed path."""
-    # Raise clear error early if path isn't iterable
-    iter(path)
-
     if recursive_match_all and "**" in path:
         path = _simplify_double_splats(path)
 
@@ -163,7 +160,25 @@ def resolve_path(obj, path, recursive_match_all=True):
             yield from ([key] for key in keys)
 
 
-def matched_keys(obj, key):
+def patterned(txt):
+    return _stringlike(txt) and any(char in txt for char in ("*", "?", "["))
+
+
+def safe_fnmatchcase(key, pattern):
+    try:
+        return fnmatchcase(key, pattern)
+    except TypeError:  # e.g. pattern could be an int - not a match
+        False
+
+
+def match_glob(key, pattern):
+    if patterned(pattern):
+        return key == pattern or safe_fnmatchcase(str(key), pattern)
+    else:
+        return key == pattern or safe_fnmatchcase(key, pattern)
+
+
+def matched_keys(obj, pattern, match_func=match_glob):
     """
     >>> matched_keys(1, '0')
     []
@@ -188,35 +203,14 @@ def matched_keys(obj, key):
         return rv
 
     try:
-        for k in obj.keys():
-            if patterned(key):
-                if k == key or match_glob(str(k), key):
-                    rv.append(k)
-            else:
-                if k == key or match_glob(k, key):
-                    rv.append(k)
+        for key in obj.keys():
+            if match_glob(key, pattern):
+                rv.append(key)
     except AttributeError:
         for idx in range(len(obj)):
-            if patterned(key):
-                if idx == key or match_glob(str(idx), key):
-                    rv.append(idx)
-            else:
-                if idx == key or match_glob(idx, key):
-                    rv.append(idx)
+            if match_glob(idx, pattern):
+                rv.append(idx)
     return rv
-
-
-def match_glob(a, b):
-    try:
-        return fnmatchcase(a, b)
-    except TypeError:  # e.g. b could be an int - not a match
-        False
-
-
-# rename to indicate globbing
-# move into class?
-def patterned(txt):
-    return _stringlike(txt) and any(char in txt for char in ("*", "?", "["))
 
 
 def getitem_by_path(obj, path: list):
