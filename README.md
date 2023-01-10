@@ -32,6 +32,24 @@ DeepCollections natively use paths as well as simple keys and indices. For `dc =
 ### Matching
 Path elements are interpretted as patterns to match against keys and indices. By default this is feature is on and uses globbing.
 
+#### Recursion
+
+`"**"` recurses any depth to find the match for the next pattern given. For example:
+
+```python
+dc = DeepCollection({"a": {"b": {"c": {"d": 5}}}, "d": 4})
+dc["a", "**", "d"] == 5
+```
+
+Coupled with another matching style like globbing allows you to do some powerful filtering:
+
+```python
+dc = DeepCollection({"a": {"b": {"c": {"xd": {"e": 0}, "yd": {"e": 1}, "zf": {"e": 2}}}}, "e": 3})
+dc["a", "**", "?d", "e"] == [0, 1]
+```
+
+This feature is independent of other matching patterns. In other words, you could swap globbing out for another matchin style, but `"**"` will remain usable unless disabled on it's own. You might want to use regex through your path but pair that with recursion.
+
 #### Matching numeric keys and indicies
 
 To enable pattern matching (like globbing) to make sense when attempting to match indices and numeric keys, if a path element is a string and appears to use globbing, it will be matched against the stringified index/key. In other words
@@ -59,24 +77,6 @@ DeepCollection({})["a"]
 ...
 KeyError: 'a'
 ```
-
-#### Recursion
-
-`"**"` recurses any depth to find the match for the next pattern given. For example:
-
-```python
-dc = DeepCollection({"a": {"b": {"c": {"d": 5}}}, "d": 4})
-dc["a", "**", "d"] == 5
-```
-
-Coupled with another matching style like globbing allows you to do some powerful filtering:
-
-```python
-dc = DeepCollection({"a": {"b": {"c": {"xd": {"e": 0}, "yd": {"e": 1}, "zf": {"e": 2}}}}, "e": 3})
-dc["a", "**", "?d", "e"] == [0, 1]
-```
-
-This feature is independent of other matching patterns. In other words, you could swap globbing out for another matchin style, but `"**"` will remain usable unless disabled on it's own. You might want to use regex through your path but pair that with recursion.
 
 ### Matching Styles
 
