@@ -4,6 +4,7 @@ build
 .tox
 flymd*
 *.pyc
+*.pyx
 *.pyo
 *.egg-info
 *~
