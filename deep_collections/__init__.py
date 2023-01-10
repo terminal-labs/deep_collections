@@ -59,13 +59,6 @@ def get_by_path_strict(obj, path, default=None):
         return default
 
 
-def _match(a, b):
-    try:
-        return fnmatchcase(a, b)
-    except TypeError:  # fallback to normal eq
-        return a == b
-
-
 def _simplify_double_splats(path):
     """Return an equivalent path, removing any unnecessary double splats."""
     # remove ending "**"
@@ -220,7 +213,7 @@ def set_by_path(obj, path, value):
             branch[part] = value
 
 
-def paths_to_key(obj, key, current=None):
+def paths_to_key(obj, key, current=None, match_with="glob"):
     """Return the path to a specified key in an object.
     A key may be simple or iterable, e.g. a str, int, list, dict, etc, as long as it
     can be used with one of the supported pattern matches,
@@ -248,13 +241,15 @@ def paths_to_key(obj, key, current=None):
     >>> list(paths_to_key({"x": 0}, ["y"]))
     []
     """
-    if current is None:
-        current = []
-
     if not pathlike(obj):
         raise TypeError(
             f"First argument must be able to be deep, not type '{type(obj)}'"
         )
+
+    match_func = match_style(match_with).match
+
+    if current is None:
+        current = []
 
     compound_key = pathlike(key)
     if compound_key and len(key) > 1:
@@ -272,24 +267,23 @@ def paths_to_key(obj, key, current=None):
                     if pathlike(i):
                         yield from paths_to_key(i, key, current + [idx])
     elif compound_key:
-        for k in key:  # Only iterates once, but works for dict or list-like keys
-            yield from paths_to_key(obj, k)
+        yield from paths_to_key(obj, next(iter(key)))
     else:  # key is simple; str, int, float, etc.
         try:
             for k, v in obj.items():
                 if pathlike(v):
                     yield from paths_to_key(v, key, current + [k])
-                if _match(k, key):
+                if match_func(k, key):
                     yield current + [k]
         except AttributeError:  # no .items
             for idx, v in enumerate(obj):
                 if pathlike(v):
                     yield from paths_to_key(v, key, current + [idx])
-                elif _match(idx, key):
+                elif match_func(idx, key):
                     yield current + [idx]
 
 
-def paths_to_value(obj, value, current=None):
+def paths_to_value(obj, value, current=None, match_with="glob"):
     """Return the path to a specified value in an object.
     A value may be simple or iterable, e.g. a str, int, list, dict, etc, as long as it
     can be used with one of the supported pattern matches,
@@ -300,15 +294,17 @@ def paths_to_value(obj, value, current=None):
     >>> list(paths_to_value(["value"], "value"))
     [[0]]
     """
-    if current is None:
-        current = []
-
     if not pathlike(obj):
         raise TypeError(
             f"First argument must be able to be deep, not type '{type(obj)}'"
         )
 
-    if _match(obj, value):
+    match_func = match_style(match_with).match
+
+    if current is None:
+        current = []
+
+    if match_func(obj, value):
         yield current
     elif pathlike(value):  # e.g. list, dict. Can be another path
         try:
@@ -329,13 +325,13 @@ def paths_to_value(obj, value, current=None):
             for k, v in obj.items():
                 if pathlike(v):
                     yield from paths_to_value(v, value, current + [k])
-                if _match(v, value):
+                if match_func(v, value):
                     yield current + [k]
         except AttributeError:  # no .items
             for idx, i in enumerate(obj):
                 if pathlike(i):
                     yield from paths_to_value(i, value, current + [idx])
-                elif _match(i, value):
+                elif match_func(i, value):
                     yield current + [idx]
 
 
