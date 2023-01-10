@@ -9,34 +9,6 @@ from .utils import _stringlike
 from .utils import pathlike
 
 
-def _non_stringlike_iterable(obj):  # TODO rename to _non_stringlike_iterable
-    """Guess if an object could be a nested collection.
-
-    The general heuristic is that an object must be iterable, but not stringlike
-    so that an element can be arbitrary, like another collection.
-
-    Since this is a simple check, there are false positives, but this works with
-    basic types.
-    >>> _non_stringlike_iterable([1])
-    True
-    >>> _non_stringlike_iterable({1:2})
-    True
-    >>> _non_stringlike_iterable(1)
-    False
-    >>> _non_stringlike_iterable("a")
-    False
-    """
-    try:
-        iter(obj)
-    except TypeError:
-        return False
-
-    if _stringlike(obj):
-        return False
-
-    return True
-
-
 def del_by_path(obj, path):
     """Delete a key-value in a nested object in root by item sequence.
     from https://stackoverflow.com/a/14692747/913080
@@ -279,12 +251,12 @@ def paths_to_key(obj, key, current=None):
     if current is None:
         current = []
 
-    if not _non_stringlike_iterable(obj):
+    if not pathlike(obj):
         raise TypeError(
             f"First argument must be able to be deep, not type '{type(obj)}'"
         )
 
-    compound_key = _non_stringlike_iterable(key)
+    compound_key = pathlike(key)
     if compound_key and len(key) > 1:
         resolved_paths = list(resolve_path(obj, key))
         if resolved_paths:
@@ -293,11 +265,11 @@ def paths_to_key(obj, key, current=None):
         else:
             try:
                 for k, v in obj.items():
-                    if _non_stringlike_iterable(v):
+                    if pathlike(v):
                         yield from paths_to_key(v, key, current + [k])
             except AttributeError:
                 for idx, i in enumerate(obj):
-                    if _non_stringlike_iterable(i):
+                    if pathlike(i):
                         yield from paths_to_key(i, key, current + [idx])
     elif compound_key:
         for k in key:  # Only iterates once, but works for dict or list-like keys
@@ -305,13 +277,13 @@ def paths_to_key(obj, key, current=None):
     else:  # key is simple; str, int, float, etc.
         try:
             for k, v in obj.items():
-                if _non_stringlike_iterable(v):
+                if pathlike(v):
                     yield from paths_to_key(v, key, current + [k])
                 if _match(k, key):
                     yield current + [k]
         except AttributeError:  # no .items
             for idx, v in enumerate(obj):
-                if _non_stringlike_iterable(v):
+                if pathlike(v):
                     yield from paths_to_key(v, key, current + [idx])
                 elif _match(idx, key):
                     yield current + [idx]
@@ -331,37 +303,37 @@ def paths_to_value(obj, value, current=None):
     if current is None:
         current = []
 
-    if not _non_stringlike_iterable(obj):
+    if not pathlike(obj):
         raise TypeError(
             f"First argument must be able to be deep, not type '{type(obj)}'"
         )
 
     if _match(obj, value):
         yield current
-    elif _non_stringlike_iterable(value):  # e.g. list, dict. Can be another path
+    elif pathlike(value):  # e.g. list, dict. Can be another path
         try:
             gbp = getitem_by_path(obj, value)
         except (KeyError, IndexError, TypeError):
             try:
                 for k, v in obj.items():
-                    if _non_stringlike_iterable(v):
+                    if pathlike(v):
                         yield from paths_to_value(v, value, current + [k])
             except AttributeError:
                 for idx, i in enumerate(obj):
-                    if _non_stringlike_iterable(i):
+                    if pathlike(i):
                         yield from paths_to_value(i, value, current + [idx])
         else:
             yield current + list(value)
     else:  # value is simple; str, int, float, etc.
         try:
             for k, v in obj.items():
-                if _non_stringlike_iterable(v):
+                if pathlike(v):
                     yield from paths_to_value(v, value, current + [k])
                 if _match(v, value):
                     yield current + [k]
         except AttributeError:  # no .items
             for idx, i in enumerate(obj):
-                if _non_stringlike_iterable(i):
+                if pathlike(i):
                     yield from paths_to_value(i, value, current + [idx])
                 elif _match(i, value):
                     yield current + [idx]
@@ -593,19 +565,19 @@ class DeepCollection(metaclass=DynamicSubclasser):
 
         rv = getitem_by_path(self._obj, path)
 
-        if _non_stringlike_iterable(rv) and self.return_deep:
+        if pathlike(rv) and self.return_deep:
             return DeepCollection(rv)
         return rv
 
     def __delitem__(self, path):
-        if _non_stringlike_iterable(path):
+        if pathlike(path):
             del_by_path(self, path)
         else:
             super().__delitem__(path)
             del self._obj[path]
 
     def __setitem__(self, path, value):
-        if _non_stringlike_iterable(path):
+        if pathlike(path):
             set_by_path(self, path, value)
         else:
             super().__setitem__(path, value)

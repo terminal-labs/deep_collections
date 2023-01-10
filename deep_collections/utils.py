@@ -11,6 +11,22 @@ def _stringlike(obj):
 
 
 def pathlike(obj):
+    """Guess if an object could be a nested collection.
+
+    The general heuristic is that an object must be iterable, but not stringlike
+    so that an element can be arbitrary, like another collection.
+
+    Since this is a simple check, there are false positives, but this works with
+    basic types.
+    >>> pathlike([1])
+    True
+    >>> pathlike({1:2})
+    True
+    >>> pathlike(1)
+    False
+    >>> pathlike("a")
+    False
+    """
     if _stringlike(obj):
         return False
 
