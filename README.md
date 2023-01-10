@@ -56,6 +56,7 @@ dc[5]
 IndexError: list index out of range
 
 DeepCollection({})["a"]
+...
 KeyError: 'a'
 ```
 
