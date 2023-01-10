@@ -4,17 +4,8 @@ from functools import reduce
 from functools import wraps
 from itertools import chain
 
-
-def _stringlike(obj):
-    """Return True if obj is an instance of str, bytes, or bytearray
-    >>> _stringlike("a")
-    True
-    >>> _stringlike(b"a")
-    True
-    >>> _stringlike(1)
-    False
-    """
-    return any(isinstance(obj, base) for base in (str, bytes, bytearray))
+from .matching import match_style
+from .utils import _stringlike
 
 
 def _non_stringlike_iterable(obj):  # TODO rename to _non_stringlike_iterable
@@ -122,7 +113,7 @@ def _simplify_double_splats(path):
     return path
 
 
-def resolve_path(obj, path, recursive_match_all=True):
+def resolve_path(obj, path, match_with="glob", recursive_match_all=True):
     """Yield all paths that match the given globbed path."""
     if recursive_match_all and "**" in path:
         path = _simplify_double_splats(path)
@@ -147,38 +138,23 @@ def resolve_path(obj, path, recursive_match_all=True):
         first_step = path[0]
         path_remainder = path[1:]
 
-        keys = matched_keys(obj, first_step)
+        keys = matched_keys(obj, first_step, match_with)
 
         if path_remainder:
             for key in keys:
                 sub_obj = obj[key]
-                smk = matched_keys(sub_obj, path_remainder[0])
+                smk = matched_keys(sub_obj, path_remainder[0], match_with)
                 if smk:
-                    yv = ([key] + sk for sk in resolve_path(sub_obj, path_remainder))
+                    yv = (
+                        [key] + sk
+                        for sk in resolve_path(sub_obj, path_remainder, match_with)
+                    )
                     yield from yv
         else:
             yield from ([key] for key in keys)
 
 
-def patterned(txt):
-    return _stringlike(txt) and any(char in txt for char in ("*", "?", "["))
-
-
-def safe_fnmatchcase(key, pattern):
-    try:
-        return fnmatchcase(key, pattern)
-    except TypeError:  # e.g. pattern could be an int - not a match
-        False
-
-
-def match_glob(key, pattern):
-    if patterned(pattern):
-        return key == pattern or safe_fnmatchcase(str(key), pattern)
-    else:
-        return key == pattern or safe_fnmatchcase(key, pattern)
-
-
-def matched_keys(obj, pattern, match_func=match_glob):
+def matched_keys(obj, pattern, match_with="glob"):
     """
     >>> matched_keys(1, '0')
     []
@@ -196,6 +172,7 @@ def matched_keys(obj, pattern, match_func=match_glob):
     ['ab', 'cde']
     """
     rv = []
+    match_func = match_style(match_with).match
 
     try:
         iter(obj)
@@ -204,17 +181,17 @@ def matched_keys(obj, pattern, match_func=match_glob):
 
     try:
         for key in obj.keys():
-            if match_glob(key, pattern):
+            if match_func(key, pattern):
                 rv.append(key)
     except AttributeError:
         for idx in range(len(obj)):
-            if match_glob(idx, pattern):
+            if match_func(idx, pattern):
                 rv.append(idx)
     return rv
 
 
-def getitem_by_path(obj, path: list):
-    paths = list(resolve_path(obj, path))
+def getitem_by_path(obj, path: list, match_with="glob"):
+    paths = list(resolve_path(obj, path, match_with))
 
     if len(paths) > 1:
         return [getitem_by_path_strict(obj, p) for p in paths]
@@ -223,7 +200,8 @@ def getitem_by_path(obj, path: list):
 
     # Check if any part of the path appears to use a pattern. If so, return an empty
     # list, rather than a KeyError/IndexError because 0 matched results.
-    if any(patterned(p) for p in path):
+
+    if any(match_style(match_with).patterned(p) for p in path):
         return paths
 
     return getitem_by_path_strict(obj, path)
