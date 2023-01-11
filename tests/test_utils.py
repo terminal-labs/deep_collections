@@ -22,6 +22,10 @@ def test_get_by_path(obj, path, result):
 @pytest.mark.parametrize(
     "obj, key, result",
     [
+        ("a", "a", TypeError),
+        (1, 1, TypeError),
+        ({1: None}, 1, [[1]]),
+        ({None: 1}, None, [[None]]),
         ({"a": 0}, None, []),
         ({"a": 0}, "", []),
         ({"a": 0}, "b", []),
@@ -60,11 +64,18 @@ def test_paths_to_key(obj, key, result):
 @pytest.mark.parametrize(
     "obj, value, result",
     [
+        ("a", "a", TypeError),
+        (1, 1, TypeError),
+        ({1: None}, None, [[1]]),
+        ({None: 1}, 1, [[None]]),
         ({"a": 0}, None, []),
         ({"a": 0}, "", []),
         ({"a": 0}, "b", []),
         ({"a": 0}, 0, [["a"]]),
         ({"a": 0}, "0", []),
+        (["a", ["value", "x"]], "x", [[1, 1]]),
+        ([["value", "x"]], ["value", "x"], [[0]]),
+        ({"a": ["value", "x"]}, ["value", "x"], [["a"]]),
         ({"a": [0]}, [0], [["a"]]),
         ({"a": {0}}, {0}, [["a"]]),
         ({"a": {0: 1}}, {0: 1}, [["a"]]),

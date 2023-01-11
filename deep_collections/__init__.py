@@ -213,6 +213,41 @@ def set_by_path(obj, path, value):
             branch[part] = value
 
 
+def _paths_to_pathlike_key(obj, key, current, match_with):
+    if len(key) > 1:
+        resolved_paths = list(resolve_path(obj, key, match_with=match_with))
+        if resolved_paths:
+            for key in resolved_paths:
+                yield current + key
+        else:
+            try:
+                for k, v in obj.items():
+                    if pathlike(v):
+                        yield from paths_to_key(v, key, current + [k], match_with)
+            except AttributeError:
+                for idx, i in enumerate(obj):
+                    if pathlike(i):
+                        yield from paths_to_key(i, key, current + [idx], match_with)
+    else:
+        yield from paths_to_key(obj, next(iter(key)), current, match_with)
+
+
+def _paths_to_simple_key(obj, key, current, match_with):
+    match_func = match_style(match_with).match
+    try:
+        for k, v in obj.items():
+            if pathlike(v):
+                yield from paths_to_key(v, key, current + [k], match_with)
+            if match_func(k, key):
+                yield current + [k]
+    except AttributeError:  # no .items
+        for idx, v in enumerate(obj):
+            if pathlike(v):
+                yield from paths_to_key(v, key, current + [idx], match_with)
+            elif match_func(idx, key):
+                yield current + [idx]
+
+
 def paths_to_key(obj, key, current=None, match_with="glob"):
     """Return the path to a specified key in an object.
     A key may be simple or iterable, e.g. a str, int, list, dict, etc, as long as it
@@ -246,41 +281,43 @@ def paths_to_key(obj, key, current=None, match_with="glob"):
             f"First argument must be able to be deep, not type '{type(obj)}'"
         )
 
-    match_func = match_style(match_with).match
-
     if current is None:
         current = []
 
-    compound_key = pathlike(key)
-    if compound_key and len(key) > 1:
-        resolved_paths = list(resolve_path(obj, key))
-        if resolved_paths:
-            for key in resolved_paths:
-                yield current + key
-        else:
-            try:
-                for k, v in obj.items():
-                    if pathlike(v):
-                        yield from paths_to_key(v, key, current + [k])
-            except AttributeError:
-                for idx, i in enumerate(obj):
-                    if pathlike(i):
-                        yield from paths_to_key(i, key, current + [idx])
-    elif compound_key:
-        yield from paths_to_key(obj, next(iter(key)))
+    if pathlike(key):
+        yield from _paths_to_pathlike_key(obj, key, current, match_with)
     else:  # key is simple; str, int, float, etc.
-        try:
-            for k, v in obj.items():
-                if pathlike(v):
-                    yield from paths_to_key(v, key, current + [k])
-                if match_func(k, key):
-                    yield current + [k]
-        except AttributeError:  # no .items
-            for idx, v in enumerate(obj):
-                if pathlike(v):
-                    yield from paths_to_key(v, key, current + [idx])
-                elif match_func(idx, key):
-                    yield current + [idx]
+        yield from _paths_to_simple_key(obj, key, current, match_with)
+
+
+def _paths_to_pathlike_value(obj, value, current, match_with):
+    # Don't test non-pathlike obj elements since they can't match a pathlike value.
+    # Being pathlike is a proxy test for being deep. If something isn't pathlike, it can't be deep.
+    try:
+        for k, v in obj.items():
+            if pathlike(v):
+                yield from paths_to_value(v, value, current + [k], match_with)
+    except AttributeError:
+        for idx, i in enumerate(obj):
+            if pathlike(i):
+                yield from paths_to_value(i, value, current + [idx], match_with)
+
+
+def _paths_to_simple_value(obj, value, current, match_with):
+    match_func = match_style(match_with).match
+
+    try:
+        for k, v in obj.items():
+            if pathlike(v):
+                yield from paths_to_value(v, value, current + [k], match_with)
+            if match_func(v, value):
+                yield current + [k]
+    except AttributeError:  # no .items
+        for idx, i in enumerate(obj):
+            if pathlike(i):
+                yield from paths_to_value(i, value, current + [idx], match_with)
+            elif match_func(i, value):
+                yield current + [idx]
 
 
 def paths_to_value(obj, value, current=None, match_with="glob"):
@@ -306,33 +343,11 @@ def paths_to_value(obj, value, current=None, match_with="glob"):
 
     if match_func(obj, value):
         yield current
+    # if no match, recurse
     elif pathlike(value):  # e.g. list, dict. Can be another path
-        try:
-            gbp = getitem_by_path(obj, value)
-        except (KeyError, IndexError, TypeError):
-            try:
-                for k, v in obj.items():
-                    if pathlike(v):
-                        yield from paths_to_value(v, value, current + [k])
-            except AttributeError:
-                for idx, i in enumerate(obj):
-                    if pathlike(i):
-                        yield from paths_to_value(i, value, current + [idx])
-        else:
-            yield current + list(value)
+        yield from _paths_to_pathlike_value(obj, value, current, match_with)
     else:  # value is simple; str, int, float, etc.
-        try:
-            for k, v in obj.items():
-                if pathlike(v):
-                    yield from paths_to_value(v, value, current + [k])
-                if match_func(v, value):
-                    yield current + [k]
-        except AttributeError:  # no .items
-            for idx, i in enumerate(obj):
-                if pathlike(i):
-                    yield from paths_to_value(i, value, current + [idx])
-                elif match_func(i, value):
-                    yield current + [idx]
+        yield from _paths_to_simple_value(obj, value, current, match_with)
 
 
 def values_for_key(obj, key):
@@ -367,8 +382,13 @@ class DynamicSubclasser(type):
     and assume that argument's class as its parent class.
 
     >>> class Foo(metaclass=DynamicSubclasser): pass
-    >>> foo = Foo(5)
-    >>> isinstance(foo, int)
+    >>> foo = Foo([5])
+    >>> foo == [5]
+    True
+    >>> isinstance(foo, list)
+    True
+    >>> foo = Foo()
+    >>> foo == {}
     True
     """
 

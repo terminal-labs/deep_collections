@@ -6,8 +6,8 @@ from .utils import _stringlike
 def match_style(style):
     if style == "glob":
         return GlobMatch
-    elif style == "re":
-        return REMatch
+    # elif style == "re":
+    #     return REMatch
 
 
 def safe_fnmatchcase(key, pattern):
