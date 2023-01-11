@@ -1,30 +1,123 @@
+import re
+from abc import ABC
+from abc import abstractmethod
 from fnmatch import fnmatchcase
 
 from .utils import _stringlike
 
 
 def match_style(style):
-    if style == "glob":
-        return GlobMatch
-    # elif style == "re":
-    #     return REMatch
+    """Return a match style class by lookup. If a"""
+    style_map = {
+        "equality": EqualityMatch,
+        "glob": GlobMatch,
+        "glob+regex": GlobOrRegexMatch,
+        "hash": HashMatch,
+        "regex": RegexMatch,
+    }
+
+    style_class = style_map.get(style, style)
+
+    if issubclass(style_class, BaseMatch):
+        return style_class
+    else:
+        raise ValueError(
+            f"Style given is not a listed match class, or a subclass of BaseMatch: {style}"
+        )
 
 
-def safe_fnmatchcase(key, pattern):
+def safe_match(func, key, pattern):
     try:
-        return fnmatchcase(key, pattern)
+        return func(key, pattern)
     except TypeError:  # e.g. pattern could be an int - not a match
         False
 
 
-class GlobMatch:
+class BaseMatch(ABC):
     @staticmethod
-    def patterned(txt):
-        return _stringlike(txt) and any(char in txt for char in "*?[")
+    @abstractmethod
+    def patterned(txt, *args, **kwargs):
+        raise NotImplementedError
 
     @staticmethod
-    def match(key, pattern):
-        if GlobMatch.patterned(pattern):
-            return key == pattern or safe_fnmatchcase(str(key), pattern)
-        else:
-            return key == pattern or safe_fnmatchcase(key, pattern)
+    @abstractmethod
+    def match(*args, **kwargs):
+        raise NotImplementedError
+
+
+class HashMatch(BaseMatch):
+    @staticmethod
+    def patterned(txt, *args, **kwargs):
+        return True
+
+    @classmethod
+    def match(cls, key, pattern, *args, **kwargs):
+        return hash(key) == hash(pattern)
+
+
+class EqualityMatch(BaseMatch):
+    @staticmethod
+    def patterned(txt, *args, **kwargs):
+        return True
+
+    @classmethod
+    def match(cls, key, pattern, *args, **kwargs):
+        return key == pattern
+
+
+class GlobMatch(EqualityMatch):
+    @staticmethod
+    def patterned(txt, *args, **kwargs):
+        if kwargs.get("case_sensitive") is False:
+            return True
+        return _stringlike(txt) and any(char in txt for char in "*?[")
+
+    @classmethod
+    def match(cls, key, pattern, case_sensitive=True, *args, **kwargs):
+        if super().match(key, pattern, *args, **kwargs):
+            return True
+
+        if cls.patterned(pattern):  # Make matching work on indices and numeric keys
+            if case_sensitive:
+                return safe_match(fnmatchcase, str(key), pattern)
+            return safe_match(fnmatchcase, str(key).lower(), pattern.lower())
+
+        if case_sensitive:
+            return safe_match(fnmatchcase, key, pattern)
+        return safe_match(fnmatchcase, key.lower(), pattern.lower())
+
+
+class RegexMatch(EqualityMatch):
+    @staticmethod
+    def patterned(txt, *args, **kwargs):
+        return _stringlike(txt) and any(char in txt for char in r".^$*+?{}[]\|()")
+
+    @classmethod
+    def match(cls, key, pattern, *args, **kwargs):
+        def re_match(key, pattern, *args, **kwargs):
+            try:
+                if re.compile(pattern).match(key, *args, **kwargs):
+                    return True
+                return False
+            except re.error as e:
+                e.args += (
+                    f"Path element is not valid Regular Expression: '{pattern}'",
+                )
+                raise  # e(
+
+        if super().match(key, pattern):
+            return True
+
+        if cls.patterned(pattern):  # Make matching work on indices and numeric keys
+            return safe_match(re_match, str(key), pattern, *args, **kwargs)
+        return safe_match(re_match, key, pattern, *args, **kwargs)
+
+        return False
+
+
+class GlobOrRegexMatch(RegexMatch):
+    @classmethod
+    def match(cls, key, pattern, *args, **kwargs):
+        return GlobMatch.match(key, pattern, *args, **kwargs) or RegexMatch.match(
+            key, pattern, *args, **kwargs
+        )

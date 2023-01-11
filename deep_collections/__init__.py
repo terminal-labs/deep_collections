@@ -9,7 +9,9 @@ from .utils import _stringlike
 from .utils import pathlike
 
 
-def del_by_path(obj, path):
+def del_by_path(
+    obj, path, match_with="glob", recursive_match_all=True, *args, **kwargs
+):
     """Delete a key-value in a nested object in root by item sequence.
     from https://stackoverflow.com/a/14692747/913080
 
@@ -18,7 +20,9 @@ def del_by_path(obj, path):
     >>> obj
     {'a': [{'c': 'd'}]}
     """
-    del getitem_by_path(obj, path[:-1])[path[-1]]
+    del getitem_by_path(
+        obj, path[:-1], match_with, recursive_match_all, *args, **kwargs
+    )[path[-1]]
 
 
 def getitem_by_path_strict(obj, path):
@@ -79,7 +83,9 @@ def _simplify_double_splats(path):
     return path
 
 
-def resolve_path(obj, path, match_with="glob", recursive_match_all=True):
+def resolve_path(
+    obj, path, match_with="glob", recursive_match_all=True, *args, **kwargs
+):
     """Yield all paths that match the given globbed path."""
     if recursive_match_all and "**" in path:
         path = _simplify_double_splats(path)
@@ -92,35 +98,61 @@ def resolve_path(obj, path, match_with="glob", recursive_match_all=True):
         path_end = path[double_splat_idx:]
 
         if path_start:
-            paths = list(resolve_path(obj, path_start))
+            paths = list(
+                resolve_path(
+                    obj, path_start, match_with, recursive_match_all, *args, **kwargs
+                )
+            )
             for p in paths:
-                path_ends = list(paths_to_key(getitem_by_path_strict(obj, p), path_end))
+                path_ends = list(
+                    paths_to_key(
+                        getitem_by_path_strict(obj, p),
+                        path_end,
+                        match_with,
+                        recursive_match_all,
+                        *args,
+                        **kwargs,
+                    )
+                )
                 for end in path_ends:
                     yield p + end
         else:  # path started with "**"
-            path_ends = list(paths_to_key(obj, path_end))
+            path_ends = list(
+                paths_to_key(
+                    obj, path_end, match_with, recursive_match_all, *args, **kwargs
+                )
+            )
             yield from path_ends
     elif path:
         first_step = path[0]
         path_remainder = path[1:]
 
-        keys = matched_keys(obj, first_step, match_with)
+        keys = matched_keys(obj, first_step, match_with, *args, **kwargs)
 
         if path_remainder:
             for key in keys:
                 sub_obj = obj[key]
-                smk = matched_keys(sub_obj, path_remainder[0], match_with)
+                smk = matched_keys(
+                    sub_obj, path_remainder[0], match_with, *args, **kwargs
+                )
                 if smk:
                     yv = (
                         [key] + sk
-                        for sk in resolve_path(sub_obj, path_remainder, match_with)
+                        for sk in resolve_path(
+                            sub_obj,
+                            path_remainder,
+                            match_with,
+                            recursive_match_all,
+                            *args,
+                            **kwargs,
+                        )
                     )
                     yield from yv
         else:
             yield from ([key] for key in keys)
 
 
-def matched_keys(obj, pattern, match_with="glob"):
+def matched_keys(obj, pattern, match_with="glob", *args, **kwargs):
     """
     >>> matched_keys(1, '0')
     []
@@ -147,22 +179,22 @@ def matched_keys(obj, pattern, match_with="glob"):
 
     try:
         for key in obj.keys():
-            if match_func(key, pattern):
+            if match_func(key, pattern, *args, **kwargs):
                 rv.append(key)
     except AttributeError:
         for idx in range(len(obj)):
-            if match_func(idx, pattern):
+            if match_func(idx, pattern, *args, **kwargs):
                 rv.append(idx)
     return rv
 
 
-def getitem_by_path(obj, path, match_with="glob"):
+def getitem_by_path(obj, path, match_with="glob", *args, **kwargs):
     if not pathlike(path):  # e.g. str or int
-        if not match_style(match_with).patterned(path):
+        if not match_style(match_with).patterned(path, *args, **kwargs):
             return obj[path]
         path = [path]
 
-    paths = list(resolve_path(obj, path, match_with))
+    paths = list(resolve_path(obj, path, match_with, *args, **kwargs))
 
     if len(paths) > 1:
         return [getitem_by_path_strict(obj, p) for p in paths]
@@ -172,13 +204,15 @@ def getitem_by_path(obj, path, match_with="glob"):
     # Check if any part of the path appears to use a pattern. If so, return an empty
     # list, rather than a KeyError/IndexError because 0 matched results.
 
-    if any(match_style(match_with).patterned(p) for p in path):
+    if any(match_style(match_with).patterned(p, *args, **kwargs) for p in path):
         return paths
 
     return getitem_by_path_strict(obj, path)
 
 
-def set_by_path(obj, path, value):
+def set_by_path(
+    obj, path, value, match_with="glob", recursive_match_all=True, *args, **kwargs
+):
     """Set a value in a nested object in obj by iterable path.
 
     If the path doesn't fully exist, this will create it to set the value,
@@ -196,12 +230,15 @@ def set_by_path(obj, path, value):
     >>> obj
     {0: {1: {2: {3: {4: {5: {6: {7: {8: {9: 10}}}}}}}}}}
     """
-    path = list(path)  # needed for later equality checks
+    # needed for later equality checks. In general paths don't need to be lists.
+    path = list(path)
 
     traversed = []
     for part in path:
         # branch = get_by_path(obj, [part])
-        branch = getitem_by_path(obj, traversed)
+        branch = getitem_by_path(
+            obj, traversed, match_with, recursive_match_all, *args, **kwargs
+        )
         traversed.append(part)
 
         try:
@@ -213,42 +250,65 @@ def set_by_path(obj, path, value):
             branch[part] = value
 
 
-def _paths_to_pathlike_key(obj, key, current, match_with):
+def _paths_to_pathlike_key(obj, key, match_with, _current, *args, **kwargs):
     if len(key) > 1:
-        resolved_paths = list(resolve_path(obj, key, match_with=match_with))
+        resolved_paths = list(resolve_path(obj, key, match_with, *args, **kwargs))
         if resolved_paths:
-            for key in resolved_paths:
-                yield current + key
+            for path in resolved_paths:
+                yield _current + path
         else:
             try:
                 for k, v in obj.items():
                     if pathlike(v):
-                        yield from paths_to_key(v, key, current + [k], match_with)
+                        yield from paths_to_key(
+                            v, key, match_with, _current=_current + [k], *args, **kwargs
+                        )
             except AttributeError:
                 for idx, i in enumerate(obj):
                     if pathlike(i):
-                        yield from paths_to_key(i, key, current + [idx], match_with)
+                        yield from paths_to_key(
+                            i,
+                            key,
+                            match_with,
+                            _current=_current + [idx],
+                            *args,
+                            **kwargs,
+                        )
     else:
-        yield from paths_to_key(obj, next(iter(key)), current, match_with)
+        yield from paths_to_key(
+            obj, next(iter(key)), match_with, _current=_current, *args, **kwargs
+        )
 
 
-def _paths_to_simple_key(obj, key, current, match_with):
+def _paths_to_simple_key(obj, key, match_with, _current, *args, **kwargs):
     match_func = match_style(match_with).match
     try:
         for k, v in obj.items():
             if pathlike(v):
-                yield from paths_to_key(v, key, current + [k], match_with)
+                yield from paths_to_key(
+                    v, key, match_with, _current=_current + [k], *args, **kwargs
+                )
             if match_func(k, key):
-                yield current + [k]
+                yield _current + [k]
     except AttributeError:  # no .items
         for idx, v in enumerate(obj):
             if pathlike(v):
-                yield from paths_to_key(v, key, current + [idx], match_with)
+                yield from paths_to_key(
+                    v, key, match_with, _current=_current + [idx], *args, **kwargs
+                )
             elif match_func(idx, key):
-                yield current + [idx]
+                yield _current + [idx]
 
 
-def paths_to_key(obj, key, current=None, match_with="glob"):
+def paths_to_key(
+    obj,
+    key,
+    match_with="glob",
+    recursive_match_all=True,
+    _current=None,
+    *args,
+    **kwargs,
+):
     """Return the path to a specified key in an object.
     A key may be simple or iterable, e.g. a str, int, list, dict, etc, as long as it
     can be used with one of the supported pattern matches,
@@ -281,46 +341,66 @@ def paths_to_key(obj, key, current=None, match_with="glob"):
             f"First argument must be able to be deep, not type '{type(obj)}'"
         )
 
-    if current is None:
-        current = []
+    if _current is None:
+        _current = []
 
     if pathlike(key):
-        yield from _paths_to_pathlike_key(obj, key, current, match_with)
+        yield from _paths_to_pathlike_key(
+            obj, key, match_with, _current, recursive_match_all, *args, **kwargs
+        )
     else:  # key is simple; str, int, float, etc.
-        yield from _paths_to_simple_key(obj, key, current, match_with)
+        yield from _paths_to_simple_key(
+            obj, key, match_with, _current, recursive_match_all, *args, **kwargs
+        )
 
 
-def _paths_to_pathlike_value(obj, value, current, match_with):
+def _paths_to_pathlike_value(obj, value, match_with, _current, *args, **kwargs):
     # Don't test non-pathlike obj elements since they can't match a pathlike value.
     # Being pathlike is a proxy test for being deep. If something isn't pathlike, it can't be deep.
     try:
         for k, v in obj.items():
             if pathlike(v):
-                yield from paths_to_value(v, value, current + [k], match_with)
+                yield from paths_to_value(
+                    v, value, match_with, _current=_current + [k], *args, **kwargs
+                )
     except AttributeError:
         for idx, i in enumerate(obj):
             if pathlike(i):
-                yield from paths_to_value(i, value, current + [idx], match_with)
+                yield from paths_to_value(
+                    i, value, match_with, _current=_current + [idx], *args, **kwargs
+                )
 
 
-def _paths_to_simple_value(obj, value, current, match_with):
+def _paths_to_simple_value(obj, value, match_with, _current, *args, **kwargs):
     match_func = match_style(match_with).match
 
     try:
         for k, v in obj.items():
             if pathlike(v):
-                yield from paths_to_value(v, value, current + [k], match_with)
+                yield from paths_to_value(
+                    v, value, match_with, _current=_current + [k], *args, **kwargs
+                )
             if match_func(v, value):
-                yield current + [k]
+                yield _current + [k]
     except AttributeError:  # no .items
         for idx, i in enumerate(obj):
             if pathlike(i):
-                yield from paths_to_value(i, value, current + [idx], match_with)
+                yield from paths_to_value(
+                    i, value, match_with, _current=_current + [idx], *args, **kwargs
+                )
             elif match_func(i, value):
-                yield current + [idx]
+                yield _current + [idx]
 
 
-def paths_to_value(obj, value, current=None, match_with="glob"):
+def paths_to_value(
+    obj,
+    value,
+    match_with="glob",
+    recursive_match_all=True,
+    _current=None,
+    *args,
+    **kwargs,
+):
     """Return the path to a specified value in an object.
     A value may be simple or iterable, e.g. a str, int, list, dict, etc, as long as it
     can be used with one of the supported pattern matches,
@@ -338,26 +418,36 @@ def paths_to_value(obj, value, current=None, match_with="glob"):
 
     match_func = match_style(match_with).match
 
-    if current is None:
-        current = []
+    if _current is None:
+        _current = []
 
-    if match_func(obj, value):
-        yield current
+    if match_func(obj, value, *args, **kwargs):
+        yield _current
     # if no match, recurse
     elif pathlike(value):  # e.g. list, dict. Can be another path
-        yield from _paths_to_pathlike_value(obj, value, current, match_with)
+        yield from _paths_to_pathlike_value(
+            obj, value, match_with, _current, recursive_match_all, *args, **kwargs
+        )
     else:  # value is simple; str, int, float, etc.
-        yield from _paths_to_simple_value(obj, value, current, match_with)
+        yield from _paths_to_simple_value(
+            obj, value, match_with, _current, recursive_match_all, *args, **kwargs
+        )
 
 
-def values_for_key(obj, key):
+def values_for_key(
+    obj, key, match_with="glob", recursive_match_all=True, *args, **kwargs
+):
     """Generate all values for a given key.
 
     >>> list(values_for_key([{"x": {"y": "value", "z": {"y": "value"}}, "y": {1: 2}}], "y"))
     ['value', 'value', {1: 2}]
     """
-    for path in paths_to_key(obj, key):
-        yield getitem_by_path(obj, path)
+    for path in paths_to_key(
+        obj, key, match_with, recursive_match_all, *args, **kwargs
+    ):
+        yield getitem_by_path(
+            obj, path, match_with, recursive_match_all, *args, **kwargs
+        )
 
 
 def deduped_items(items):
