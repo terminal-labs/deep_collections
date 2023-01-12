@@ -29,39 +29,36 @@ fun_five = FunkyInt(5)
 
 # Basic tests of various match styles
 @pytest.mark.parametrize(
-    "obj, path, match_with, kwargs, result",
+    "obj, path, kwargs, result",
     [
-        ({4: 1}, -4, "hash", {}, []),
-        ({fun_five: 1}, -5, "hash", {}, 1),
-        ({"foo!": 1}, "foo!", "equality", {}, 1),
-        ({1: 1}, 0, "equality", {}, []),
-        ({"accccb": 1}, "a[bcd]*b", "regex", {}, 1),
-        ({"xd": 1}, "xd", "regex", {}, 1),
-        ({"xd": 1}, "?d", "regex", {}, re.error),
-        ({"xd": 1}, "?d", None, {}, 1),
-        ({"xd": 1}, "?d", None, {}, 1),
-        ({"xd": 1}, "Xd", None, {"case_sensitive": False}, 1),
+        ({4: 1}, -4, {"match_with": "hash"}, []),
+        ({fun_five: 1}, -5, {"match_with": "hash"}, 1),
+        ({"foo!": 1}, "foo!", {"match_with": "equality"}, 1),
+        ({1: 1}, 0, {"match_with": "equality"}, []),
+        ({"accccb": 1}, "a[bcd]*b", {"match_with": "regex"}, 1),
+        ({"xd": 1}, "xd", {"match_with": "regex"}, 1),
+        ({"xd": 1}, "?d", {"match_with": "regex"}, re.error),
+        ({"xd": 1}, "?d", {}, 1),
+        ({"xd": 1}, "?d", {}, 1),
+        ({"xd": 1}, "Xd", {"case_sensitive": False}, 1),
         (
             {"b": {"accccb": {"xd": {"e": 0}}}},
             ["**", "a[bcd]*b", "?d", "e"],
-            "glob+regex",
-            {},
+            {"match_with": "glob+regex"},
             0,
         ),
+        ({"a": {"b": 1}}, ["**", "b"], {"match_with": "equality", "recursive_match_all": False}, []),
+        ({"a": {"b": 1}}, ["**", "b"], {"recursive_match_all": False}, 1),  # "**" matches "*" from normal globbing
+        ({"a": {"b": {"c": 1}}}, ["**", "c"], {"recursive_match_all": False}, []),
+        ({"a": {"**": {"c": 1}}}, ["a", "**", "c"], {"match_with": "equality", "recursive_match_all": False}, 1),
     ],
 )
-def test_getitem_by_path_styles(obj, path, match_with, kwargs, result):
+def test_getitem_by_path_styles(obj, path, kwargs, result):
     if inspect.isclass(result) and issubclass(result, Exception):
         with pytest.raises(result):
-            if match_with:
-                getitem_by_path(obj, path, match_with=match_with, **kwargs)
-            else:
-                getitem_by_path(obj, path, **kwargs)
+            getitem_by_path(obj, path, **kwargs)
     else:
-        if match_with:
-            assert getitem_by_path(obj, path, match_with=match_with, **kwargs) == result
-        else:
-            assert getitem_by_path(obj, path, **kwargs) == result
+        assert getitem_by_path(obj, path, **kwargs) == result
 
 
 @pytest.mark.parametrize(

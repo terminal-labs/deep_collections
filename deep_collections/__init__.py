@@ -190,7 +190,6 @@ def matched_keys(obj, pattern, *args, match_with="glob", **kwargs):
 def getitem_by_path(obj, path, *args, match_with="glob", **kwargs):
     if not pathlike(path):  # e.g. str or int
         if not match_style(match_with).patterned(path, *args, **kwargs):
-            # breakpoint()
             return obj[path]
         path = [path]
 
