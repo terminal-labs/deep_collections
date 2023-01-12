@@ -21,9 +21,7 @@ def match_style(style):
     if issubclass(style_class, BaseMatch):
         return style_class
     else:
-        raise ValueError(
-            f"Style given is not a listed match class, or a subclass of BaseMatch: {style}"
-        )
+        raise ValueError(f"Style given is not a listed match class, or a subclass of BaseMatch: {style}")
 
 
 def safe_match(func, key, pattern):
@@ -73,7 +71,7 @@ class GlobMatch(EqualityMatch):
         return _stringlike(txt) and any(char in txt for char in "*?[")
 
     @classmethod
-    def match(cls, key, pattern, case_sensitive=True, *args, **kwargs):
+    def match(cls, key, pattern, *args, case_sensitive=True, **kwargs):
         if super().match(key, pattern, *args, **kwargs):
             return True
 
@@ -94,23 +92,21 @@ class RegexMatch(EqualityMatch):
 
     @classmethod
     def match(cls, key, pattern, *args, **kwargs):
-        def re_match(key, pattern, *args, **kwargs):
+        def re_match(key, pattern, **kwargs):
             try:
                 if re.compile(pattern).match(key, *args, **kwargs):
                     return True
                 return False
             except re.error as e:
-                e.args += (
-                    f"Path element is not valid Regular Expression: '{pattern}'",
-                )
+                e.args += (f"Path element is not valid Regular Expression: '{pattern}'",)
                 raise  # e(
 
-        if super().match(key, pattern):
+        if super().match(key, pattern, *args, **kwargs):
             return True
 
         if cls.patterned(pattern):  # Make matching work on indices and numeric keys
-            return safe_match(re_match, str(key), pattern, *args, **kwargs)
-        return safe_match(re_match, key, pattern, *args, **kwargs)
+            return safe_match(re_match, str(key), pattern)
+        return safe_match(re_match, key, pattern)
 
         return False
 
@@ -118,6 +114,4 @@ class RegexMatch(EqualityMatch):
 class GlobOrRegexMatch(RegexMatch):
     @classmethod
     def match(cls, key, pattern, *args, **kwargs):
-        return GlobMatch.match(key, pattern, *args, **kwargs) or RegexMatch.match(
-            key, pattern, *args, **kwargs
-        )
+        return GlobMatch.match(key, pattern, *args, **kwargs) or RegexMatch.match(key, pattern, *args, **kwargs)

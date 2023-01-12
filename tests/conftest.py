@@ -2,12 +2,10 @@ import inspect
 from abc import ABC
 from abc import abstractmethod
 from copy import deepcopy
-from functools import wraps
 
 import pytest
 
 from .parameters import getitem_dict_tests
-from .parameters import getitem_list_tests
 from deep_collections import DeepCollection
 
 

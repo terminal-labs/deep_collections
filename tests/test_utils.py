@@ -1,10 +1,8 @@
 import inspect
 import re
-from itertools import chain
 
 import pytest
 
-from .parameters import getitem_dict_tests
 from .parameters import getitem_tests
 from deep_collections import getitem_by_path
 from deep_collections import paths_to_key
@@ -28,11 +26,12 @@ class FunkyInt(int):
 
 fun_five = FunkyInt(5)
 
+
 # Basic tests of various match styles
 @pytest.mark.parametrize(
     "obj, path, match_with, kwargs, result",
     [
-        ({5: 1}, -5, "hash", {}, []),
+        ({4: 1}, -4, "hash", {}, []),
         ({fun_five: 1}, -5, "hash", {}, 1),
         ({"foo!": 1}, "foo!", "equality", {}, 1),
         ({1: 1}, 0, "equality", {}, []),
@@ -55,12 +54,12 @@ def test_getitem_by_path_styles(obj, path, match_with, kwargs, result):
     if inspect.isclass(result) and issubclass(result, Exception):
         with pytest.raises(result):
             if match_with:
-                getitem_by_path(obj, path, match_with, **kwargs)
+                getitem_by_path(obj, path, match_with=match_with, **kwargs)
             else:
                 getitem_by_path(obj, path, **kwargs)
     else:
         if match_with:
-            assert getitem_by_path(obj, path, match_with, **kwargs) == result
+            assert getitem_by_path(obj, path, match_with=match_with, **kwargs) == result
         else:
             assert getitem_by_path(obj, path, **kwargs) == result
 
@@ -163,9 +162,9 @@ def test_paths_to_value(obj, value, result):
 def test_paths_to_key_match_withs(obj, key, match_with, result):
     if inspect.isclass(result) and issubclass(result, Exception):
         with pytest.raises(result):
-            list(paths_to_key(obj, key, match_with))
+            list(paths_to_key(obj, key, match_with=match_with))
     else:
-        assert list(paths_to_key(obj, key, match_with)) == result
+        assert list(paths_to_key(obj, key, match_with=match_with)) == result
 
 
 @pytest.mark.parametrize(
@@ -182,6 +181,6 @@ def test_paths_to_key_match_withs(obj, key, match_with, result):
 def test_paths_to_value_match_withs(obj, value, match_with, result):
     if inspect.isclass(result) and issubclass(result, Exception):
         with pytest.raises(result):
-            list(paths_to_value(obj, value, match_with))
+            list(paths_to_value(obj, value, match_with=match_with))
     else:
-        assert list(paths_to_value(obj, value, match_with)) == result
+        assert list(paths_to_value(obj, value, match_with=match_with)) == result
