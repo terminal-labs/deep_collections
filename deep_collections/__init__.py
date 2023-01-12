@@ -594,7 +594,17 @@ class DeepCollection(metaclass=DynamicSubclasser):
     'j'
     """
 
-    def __init__(self, obj, *args, return_deep=True, **kwargs):
+    def __init__(
+        self,
+        obj,
+        *args,
+        return_deep=True,
+        match_with="glob",
+        recursive_match_all=True,
+        match_args=None,
+        match_kwargs=None,
+        **kwargs,
+    ):
         # Set instance vars first in case anything else (like super().__init__) accesses
         # methods that trigger our __getattribute__, which needs them present.
         #
@@ -609,6 +619,10 @@ class DeepCollection(metaclass=DynamicSubclasser):
 
         self.original_type = type(self._obj)
         self.return_deep = return_deep
+        self.match_with = match_with
+        self.recursive_match_all = recursive_match_all
+        self.match_args = match_args or ()
+        self.match_kwargs = match_kwargs or {}
 
         # This often sets the original value for `self` for mutable types.
         # I.e. it gives a new list its content.
@@ -693,22 +707,50 @@ class DeepCollection(metaclass=DynamicSubclasser):
         # Use self._obj instead of self to avoid unnecessary intermediate
         # DeepCollections. Just make a final conversion at the end.
 
-        rv = getitem_by_path(self._obj, path)
+        rv = getitem_by_path(
+            self._obj,
+            path,
+            *self.match_args,
+            match_with=self.match_with,
+            recursive_match_all=self.recursive_match_all,
+            **self.match_kwargs,
+        )
 
         if pathlike(rv) and self.return_deep:
-            return DeepCollection(rv)
+            return DeepCollection(
+                rv,
+                match_with=self.match_with,
+                recursive_match_all=self.recursive_match_all,
+                match_args=self.match_args,
+                match_kwargs=self.match_kwargs,
+            )
         return rv
 
     def __delitem__(self, path):
         if pathlike(path):
-            del_by_path(self, path)
+            del_by_path(
+                self,
+                path,
+                *self.match_args,
+                match_with=self.match_with,
+                recursive_match_all=self.recursive_match_all,
+                **self.match_kwargs,
+            )
         else:
             super().__delitem__(path)
             del self._obj[path]
 
     def __setitem__(self, path, value):
         if pathlike(path):
-            set_by_path(self, path, value)
+            set_by_path(
+                self,
+                path,
+                value,
+                *self.match_args,
+                match_with=self.match_with,
+                recursive_match_all=self.recursive_match_all,
+                **self.match_kwargs,
+            )
         else:
             super().__setitem__(path, value)
             self._obj[path] = value
@@ -721,33 +763,74 @@ class DeepCollection(metaclass=DynamicSubclasser):
         return f"DeepCollection({super_repr})"
 
     # Common public methods
-    def get(self, path, default=None):
+    def get(self, path, default=None, *, match_args=None, match_with=None, recursive_match_all=None, match_kwargs=None):
+        # These are one-offs and should not mutate self
+        match_args = match_args or self.match_args
+        match_with = match_with or self.match_with
+        match_kwargs = match_kwargs or self.match_kwargs
+        if recursive_match_all is None:
+            recursive_match_all = self.recursive_match_all
+
         try:
-            return self.__getitem__(path)
+            rv = getitem_by_path(
+                self._obj,
+                path,
+                *match_args,
+                match_with=match_with,
+                recursive_match_all=recursive_match_all,
+                **match_kwargs,
+            )
         except (KeyError, IndexError, TypeError):
             return default
+
+        if pathlike(rv) and self.return_deep:  # pathlike is a proxy test for an object being deepable
+            # retain settings from self, not the one-off values
+            return DeepCollection(
+                rv,
+                match_with=self.match_with,
+                recursive_match_all=self.recursive_match_all,
+                match_args=self.match_args,
+                match_kwargs=self.match_kwargs,
+            )
+        return rv
 
     def items(self, *args, **kwargs):
         # XXX what about when it doesn't exist?
         return super().items(*args, **kwargs)
 
     # Unique public methods
-    def paths_to_key(self, key):
+    def paths_to_key(self, key, *args, match_with=None, recursive_match_all=None, **kwargs):
         """
         >>> list(DeepCollection([{"x": {"y": "value", "z": {"y": "asdf"}}}]).paths_to_key("y"))
         [[0, 'x', 'y'], [0, 'x', 'z', 'y']]
         """
-        yield from paths_to_key(self, key)
+        match_with = match_with or self.match_with
+        match_args = args or self.match_args
+        match_kwargs = kwargs or self.match_kwargs
+        if recursive_match_all is None:
+            recursive_match_all = self.recursive_match_all
 
-    def values_for_key(self, key):
+        yield from paths_to_key(
+            self, key, *match_args, match_with=match_with, recursive_match_all=recursive_match_all, **match_kwargs
+        )
+
+    def values_for_key(self, key, *args, match_with=None, recursive_match_all=None, **kwargs):
         """
         >>> dc = DeepCollection([{"x": {"y": "v", "z": {"y": "v"}}, "y": {1: 2}}], return_deep=False)
         >>> list(dc.values_for_key("y"))
         ['v', 'v', {1: 2}]
         """
-        yield from values_for_key(self, key)
+        match_with = match_with or self.match_with
+        match_args = args or self.match_args
+        match_kwargs = kwargs or self.match_kwargs
+        if recursive_match_all is None:
+            recursive_match_all = self.recursive_match_all
 
-    def deduped_values_for_key(self, key):
+        yield from values_for_key(
+            self, key, *match_args, match_with=match_with, recursive_match_all=recursive_match_all, **match_kwargs
+        )
+
+    def deduped_values_for_key(self, key, *args, match_with=None, recursive_match_all=None, **kwargs):
         """
         >>> dc = DeepCollection([{"x": {"y": "v", "z": {"y": "v"}}, "y": {1: 2}}], return_deep=False)
         >>> 'v' in dc.deduped_values_for_key("y")  # order not gaurunteed
@@ -755,4 +838,21 @@ class DeepCollection(metaclass=DynamicSubclasser):
         >>> {1: 2} in dc.deduped_values_for_key("y")  # order not gaurunteed
         True
         """
-        return deduped_items(list(values_for_key(self, key)))
+        match_with = match_with or self.match_with
+        match_args = args or self.match_args
+        match_kwargs = kwargs or self.match_kwargs
+        if recursive_match_all is None:
+            recursive_match_all = self.recursive_match_all
+
+        return deduped_items(
+            list(
+                values_for_key(
+                    self,
+                    key,
+                    *match_args,
+                    match_with=match_with,
+                    recursive_match_all=recursive_match_all,
+                    **match_kwargs,
+                )
+            )
+        )
