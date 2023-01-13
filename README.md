@@ -1,6 +1,7 @@
 ## Deep Collections
 
 [![PyPI version](https://badge.fury.io/py/deep-collections.svg)](https://pypi.org/project/deep-collections/)
+[![codecov](https://codecov.io/gh/terminal-labs/deep_collections/branch/main/graph/badge.svg?token=F1JVYFDCJI)](https://codecov.io/gh/terminal-labs/deep_collections)
 <a href="https://github.com/ambv/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
 
 deep_collections is a Python library that provides tooling for easy access to deep collections (dicts, lists, deques, etc), while maintaining a great portion of the collection's original API. The class DeepCollection class will automatically subclass the original collection that is provided, and add several quality of life extensions to make using deep collections much more enjoyable.
