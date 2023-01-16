@@ -28,7 +28,7 @@ def safe_match(func, key, pattern):
     try:
         return func(key, pattern)
     except TypeError:  # e.g. pattern could be an int - not a match
-        False
+        return False
 
 
 class BaseMatch(ABC):
