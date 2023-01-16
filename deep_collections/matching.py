@@ -37,9 +37,9 @@ class BaseMatch(ABC):
     def patterned(txt, *args, **kwargs):
         raise NotImplementedError
 
-    @staticmethod
+    @classmethod
     @abstractmethod
-    def match(*args, **kwargs):
+    def match(cls, key, pattern, *args, **kwargs):
         raise NotImplementedError
 
 
@@ -107,8 +107,6 @@ class RegexMatch(EqualityMatch):
         if cls.patterned(pattern):  # Make matching work on indices and numeric keys
             return safe_match(re_match, str(key), pattern)
         return safe_match(re_match, key, pattern)
-
-        return False
 
 
 class GlobOrRegexMatch(RegexMatch):
