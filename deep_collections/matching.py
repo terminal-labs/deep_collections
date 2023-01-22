@@ -20,8 +20,7 @@ def match_style(style):
 
     if issubclass(style_class, BaseMatch):
         return style_class
-    else:
-        raise ValueError(f"Style given is not a listed match class, or a subclass of BaseMatch: {style}")
+    raise ValueError(f"Style given is not a listed match class, or a subclass of BaseMatch: {style}")
 
 
 def safe_match(func, key, pattern):

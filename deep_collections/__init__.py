@@ -200,6 +200,7 @@ def getitem_by_path(obj, path, *args, match_with="glob", **kwargs):
     elif len(paths) == 1:
         return getitem_by_path_strict(obj, paths[0])
 
+    # len(paths) == 0
     # Check if any part of the path appears to use a pattern. If so, return an empty
     # list, rather than a KeyError/IndexError because 0 matched results.
 
@@ -297,13 +298,13 @@ def _paths_to_simple_key(obj, key, *args, match_with, _current, **kwargs):
     try:
         for k, v in obj.items():
             if pathlike(v):
-                yield from paths_to_key(v, key, match_with=match_with, _current=_current + [k], **kwargs)
+                yield from paths_to_key(v, key, *args, match_with=match_with, _current=_current + [k], **kwargs)
             if match_func(k, key):
                 yield _current + [k]
     except AttributeError:  # no .items
         for idx, v in enumerate(obj):
             if pathlike(v):
-                yield from paths_to_key(v, key, match_with=match_with, _current=_current + [idx], **kwargs)
+                yield from paths_to_key(v, key, *args, match_with=match_with, _current=_current + [idx], **kwargs)
             elif match_func(idx, key):
                 yield _current + [idx]
 
