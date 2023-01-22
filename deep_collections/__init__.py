@@ -6,7 +6,7 @@ from .matching import match_style
 from .utils import pathlike
 
 
-def del_by_path(obj, path, match_with="glob", recursive_match_all=True, **kwargs):
+def del_by_path(obj, path, **kwargs):
     """Delete a key-value in a nested object in root by item sequence.
     from https://stackoverflow.com/a/14692747/913080
 
@@ -15,7 +15,7 @@ def del_by_path(obj, path, match_with="glob", recursive_match_all=True, **kwargs
     >>> obj
     {'a': [{'c': 'd'}]}
     """
-    del getitem_by_path(obj, path[:-1], match_with, recursive_match_all, **kwargs)[path[-1]]
+    del getitem_by_path(obj, path[:-1], **kwargs)[path[-1]]
 
 
 def getitem_by_path_strict(obj, path):
@@ -76,54 +76,52 @@ def _simplify_double_splats(path):
     return path
 
 
+def _resolve_double_splat(obj, path, *args, **kwargs):
+    # '**' can match any a path fragment of any length, including 0.
+    double_splat_idx = path.index("**") + 1
+
+    path_start = path[: double_splat_idx - 1]
+    path_end = path[double_splat_idx:]
+
+    if path_start:
+        paths = list(
+            resolve_path(
+                obj,
+                path_start,
+                *args,
+                **kwargs,
+            )
+        )
+        for p in paths:
+            path_ends = list(
+                paths_to_key(
+                    getitem_by_path_strict(obj, p),
+                    path_end,
+                    *args,
+                    **kwargs,
+                )
+            )
+            for end in path_ends:
+                yield p + end
+    else:  # path started with "**"
+        path_ends = list(
+            paths_to_key(
+                obj,
+                path_end,
+                *args,
+                **kwargs,
+            )
+        )
+        yield from path_ends
+
+
 def resolve_path(obj, path, *args, match_with="glob", recursive_match_all=True, **kwargs):
     """Yield all paths that match the given globbed path."""
     if recursive_match_all and "**" in path:
         path = _simplify_double_splats(path)
 
     if recursive_match_all and "**" in path:
-        # '**' can match any a path fragment of any length, including 0.
-        double_splat_idx = path.index("**") + 1
-
-        path_start = path[: double_splat_idx - 1]
-        path_end = path[double_splat_idx:]
-
-        if path_start:
-            paths = list(
-                resolve_path(
-                    obj,
-                    path_start,
-                    *args,
-                    match_with=match_with,
-                    recursive_match_all=recursive_match_all,
-                    **kwargs,
-                )
-            )
-            for p in paths:
-                path_ends = list(
-                    paths_to_key(
-                        getitem_by_path_strict(obj, p),
-                        path_end,
-                        *args,
-                        match_with=match_with,
-                        recursive_match_all=recursive_match_all,
-                        **kwargs,
-                    )
-                )
-                for end in path_ends:
-                    yield p + end
-        else:  # path started with "**"
-            path_ends = list(
-                paths_to_key(
-                    obj,
-                    path_end,
-                    *args,
-                    match_with=match_with,
-                    recursive_match_all=recursive_match_all,
-                    **kwargs,
-                )
-            )
-            yield from path_ends
+        yield from _resolve_double_splat(obj, path, *args, **kwargs)
     elif path:
         first_step = path[0]
         path_remainder = path[1:]
@@ -187,7 +185,10 @@ def matched_keys(obj, pattern, *args, match_with="glob", **kwargs):
     return rv
 
 
-def getitem_by_path(obj, path, *args, match_with="glob", **kwargs):
+def getitem_by_path(obj, path, *args, match_with="glob", strict=False, **kwargs):
+    if strict:
+        return getitem_by_path_strict(obj, path)
+
     if not pathlike(path):  # e.g. str or int
         if not match_style(match_with).patterned(path, *args, **kwargs):
             return obj[path]
@@ -210,7 +211,7 @@ def getitem_by_path(obj, path, *args, match_with="glob", **kwargs):
     return getitem_by_path_strict(obj, path)
 
 
-def set_by_path(obj, path, value, *args, match_with="glob", recursive_match_all=True, **kwargs):
+def set_by_path(obj, path, value, *args, **kwargs):
     """Set a value in a nested object in obj by iterable path.
 
     If the path doesn't fully exist, this will create it to set the value,
@@ -238,8 +239,6 @@ def set_by_path(obj, path, value, *args, match_with="glob", recursive_match_all=
             obj,
             traversed,
             *args,
-            match_with=match_with,
-            recursive_match_all=recursive_match_all,
             **kwargs,
         )
         traversed.append(part)
@@ -599,11 +598,12 @@ class DeepCollection(metaclass=DynamicSubclasser):
         self,
         obj,
         *args,
-        return_deep=True,
-        match_with="glob",
-        recursive_match_all=True,
         match_args=None,
         match_kwargs=None,
+        match_with="glob",
+        recursive_match_all=True,
+        return_deep=True,
+        strict=False,
         **kwargs,
     ):
         # Set instance vars first in case anything else (like super().__init__) accesses
@@ -618,12 +618,13 @@ class DeepCollection(metaclass=DynamicSubclasser):
         else:
             self._obj = obj
 
-        self.original_type = type(self._obj)
-        self.return_deep = return_deep
-        self.match_with = match_with
-        self.recursive_match_all = recursive_match_all
         self.match_args = match_args or ()
         self.match_kwargs = match_kwargs or {}
+        self.match_with = match_with
+        self.original_type = type(self._obj)
+        self.recursive_match_all = recursive_match_all
+        self.return_deep = return_deep
+        self.strict = strict
 
         # This often sets the original value for `self` for mutable types.
         # I.e. it gives a new list its content.
@@ -714,6 +715,7 @@ class DeepCollection(metaclass=DynamicSubclasser):
             *self.match_args,
             match_with=self.match_with,
             recursive_match_all=self.recursive_match_all,
+            strict=self.strict,
             **self.match_kwargs,
         )
 
@@ -724,6 +726,7 @@ class DeepCollection(metaclass=DynamicSubclasser):
                 recursive_match_all=self.recursive_match_all,
                 match_args=self.match_args,
                 match_kwargs=self.match_kwargs,
+                strict=self.strict,
             )
         return rv
 
@@ -735,6 +738,7 @@ class DeepCollection(metaclass=DynamicSubclasser):
                 *self.match_args,
                 match_with=self.match_with,
                 recursive_match_all=self.recursive_match_all,
+                strict=self.strict,
                 **self.match_kwargs,
             )
         else:
@@ -750,6 +754,7 @@ class DeepCollection(metaclass=DynamicSubclasser):
                 *self.match_args,
                 match_with=self.match_with,
                 recursive_match_all=self.recursive_match_all,
+                strict=self.strict,
                 **self.match_kwargs,
             )
         else:
