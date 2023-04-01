@@ -820,6 +820,21 @@ class DeepCollection(metaclass=DynamicSubclasser):
             self, key, *match_args, match_with=match_with, recursive_match_all=recursive_match_all, **match_kwargs
         )
 
+    def paths_to_value(self, key, *args, match_with=None, recursive_match_all=None, **kwargs):
+        """
+        >>> list(DeepCollection([{"x": {"y": "value", "z": {"y": "asdf"}}}]).paths_to_value("asdf"))
+        [[0, 'x', 'z', 'y']]
+        """
+        match_with = match_with or self.match_with
+        match_args = args or self.match_args
+        match_kwargs = kwargs or self.match_kwargs
+        if recursive_match_all is None:
+            recursive_match_all = self.recursive_match_all
+
+        yield from paths_to_value(
+            self, key, *match_args, match_with=match_with, recursive_match_all=recursive_match_all, **match_kwargs
+        )
+
     def values_for_key(self, key, *args, match_with=None, recursive_match_all=None, **kwargs):
         """
         >>> dc = DeepCollection([{"x": {"y": "v", "z": {"y": "v"}}, "y": {1: 2}}], return_deep=False)
