@@ -41,6 +41,8 @@ pytest-mock = "^3.7.0"
 tox = "^3.24.5"
 tox-poetry-installer = {version = "^0.9.0"}
 radon = "^5.1.0"
+grip = "^4.6.1"
+python-benedict = "^0.30.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <title>presentation.md - Grip</title>
+  <link rel="icon" href="http://localhost:6419/__/grip/static/favicon.ico">
+  <link rel="stylesheet" href="presentation_files/dark_tritanopia-0dcf95848dd5.css">
+  <link rel="stylesheet" href="presentation_files/dark_colorblind-8b800495504f.css">
+  <link rel="stylesheet" href="presentation_files/light_tritanopia-e4be9332dd6c.css">
+  <link rel="stylesheet" href="presentation_files/primer-7cc439b4edd0.css">
+  <link rel="stylesheet" href="presentation_files/dark_high_contrast-11d3505dc06a.css">
+  <link rel="stylesheet" href="presentation_files/dark_dimmed-1ad5cf51dfeb.css">
+  <link rel="stylesheet" href="presentation_files/light-fe3f886b577a.css">
+  <link rel="stylesheet" href="presentation_files/code-320016e09986.css">
+  <link rel="stylesheet" href="presentation_files/light_high_contrast-1b9ea565820a.css">
+  <link rel="stylesheet" href="presentation_files/github-b46e0c81f808.css">
+  <link rel="stylesheet" href="presentation_files/global-835b815139bc.css">
+  <link rel="stylesheet" href="presentation_files/light_colorblind-daa38c88b795.css">
+  <link rel="stylesheet" href="presentation_files/dark-a1dbeda2886c.css">
+  <link rel="stylesheet" href="presentation_files/octicons.css">
+  <style>
+    /* Page tweaks */
+    .preview-page {
+      margin-top: 64px;
+      margin-bottom: 21px;
+    }
+    /* User-content tweaks */
+    .timeline-comment-wrapper > .timeline-comment:after,
+    .timeline-comment-wrapper > .timeline-comment:before {
+      content: none;
+    }
+    /* User-content overrides */
+    .discussion-timeline.wide {
+      width: 920px;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div id="preview-page" class="preview-page" data-autorefresh-url="/__/grip/refresh/">
+    <main id="js-repo-pjax-container">
+      <div class="clearfix new-discussion-timeline container-xl px-3 px-md-4 px-lg-5">
+        <div class="repository-content">
+          <div class="clearfix">
+            <div class="Layout Layout--flowRow-until-md Layout--sidebarPosition-end Layout--sidebarPosition-flowRow-end">
+              <div class="Layout-main">
+
+                
+
+                  <div id="readme" class="Box md Box--responsive">
+                    
+                      <div class="Box-header d-flex border-bottom-0 flex-items-center flex-justify-between color-bg-default rounded-top-2">
+                        <div class="d-flex flex-items-center">
+                          <h2 class="Box-title">
+                            presentation.md
+                          </h2>
+                        </div>
+                      </div>
+                    
+                    <div class="Box-body px-5 pb-5">
+                      <article id="grip-content" class="markdown-body entry-content container-lg">
+                        <h2><a id="user-content-cumbersome-data" class="anchor" aria-hidden="true" href="#cumbersome-data"><span aria-hidden="true" class="octicon octicon-link"></span></a>Cumbersome data</h2>
+<div class="highlight highlight-source-python"><pre><span class="pl-s1">data</span> <span class="pl-c1">=</span> {
+    <span class="pl-s">"company"</span>: {
+        <span class="pl-s">"company.name"</span>: <span class="pl-s">"Acme Corporation"</span>,
+        <span class="pl-s">"company.address"</span>: {
+            <span class="pl-s">"street"</span>: <span class="pl-s">"1234 Main St"</span>,
+            <span class="pl-s">"city"</span>: <span class="pl-s">"Anytown"</span>,
+            <span class="pl-s">"state"</span>: <span class="pl-s">"CA"</span>,
+            <span class="pl-s">"zip.code"</span>: <span class="pl-s">"12345"</span>
+        },
+        <span class="pl-s">"employees"</span>: [
+            {
+                <span class="pl-s">"email"</span>: <span class="pl-s">"john.doe@example.com"</span>,
+                <span class="pl-s">"personal.info"</span>: {
+                    <span class="pl-s">"first.name"</span>: <span class="pl-s">"John"</span>,
+                    <span class="pl-s">"last.name"</span>: <span class="pl-s">"Doe"</span>,
+                    <span class="pl-s">"age"</span>: <span class="pl-c1">30</span>
+                },
+                <span class="pl-s">"contact.info"</span>: {
+                    <span class="pl-s">"address"</span>: {
+                        <span class="pl-s">"street"</span>: <span class="pl-s">"123 Main St."</span>,
+                        <span class="pl-s">"city"</span>: <span class="pl-s">"Anytown"</span>,
+                        <span class="pl-s">"state"</span>: <span class="pl-s">"CA"</span>,
+                        <span class="pl-s">"zip.code"</span>: <span class="pl-s">"12345"</span>
+                    },
+                    <span class="pl-s">"phone.numbers"</span>: [
+                        <span class="pl-s">"+1-555-555-5555"</span>,
+                        <span class="pl-s">"+1-555-555-5556"</span>
+                    ]
+                },
+                <span class="pl-s">"work.info"</span>: {
+                    <span class="pl-s">"position"</span>: <span class="pl-s">"Software Engineer"</span>,
+                    <span class="pl-s">"salary"</span>: <span class="pl-c1">100000</span>,
+                    <span class="pl-s">"projects"</span>: [
+                        <span class="pl-s">"Project A"</span>,
+                        <span class="pl-s">"Project B"</span>,
+                        <span class="pl-s">"Project C"</span>
+                    ]
+                }
+            },
+            {
+                <span class="pl-s">"email"</span>: <span class="pl-s">"jane.smith@example.com"</span>,
+                <span class="pl-s">"personal.info"</span>: {
+                    <span class="pl-s">"first.name"</span>: <span class="pl-s">"Jane"</span>,
+                    <span class="pl-s">"last.name"</span>: <span class="pl-s">"Smith"</span>,
+                    <span class="pl-s">"age"</span>: <span class="pl-c1">25</span>
+                },
+                <span class="pl-s">"contact.info"</span>: {
+                    <span class="pl-s">"address"</span>: {
+                        <span class="pl-s">"street"</span>: <span class="pl-s">"456 Broad St."</span>,
+                        <span class="pl-s">"city"</span>: <span class="pl-s">"Otherville"</span>,
+                        <span class="pl-s">"state"</span>: <span class="pl-s">"NY"</span>,
+                        <span class="pl-s">"zip.code"</span>: <span class="pl-s">"54321"</span>
+                    },
+                    <span class="pl-s">"phone.numbers"</span>: [
+                        <span class="pl-s">"+1-555-555-5555"</span>
+                    ]
+                },
+                <span class="pl-s">"work.info"</span>: {
+                    <span class="pl-s">"position"</span>: <span class="pl-s">"Marketing Manager"</span>,
+                    <span class="pl-s">"salary"</span>: <span class="pl-c1">80000</span>,
+                    <span class="pl-s">"projects"</span>: [
+                        <span class="pl-s">"Project D"</span>,
+                        <span class="pl-s">"Project E"</span>]}}]}}</pre></div>
+<h2><a id="user-content-dotty-dict" class="anchor" aria-hidden="true" href="#dotty-dict"><span aria-hidden="true" class="octicon octicon-link"></span></a>Dotty Dict</h2>
+<h3><a id="user-content-the-good" class="anchor" aria-hidden="true" href="#the-good"><span aria-hidden="true" class="octicon octicon-link"></span></a>The Good</h3>
+<div class="highlight highlight-source-python"><pre><span class="pl-k">from</span> <span class="pl-s1">dotty_dict</span> <span class="pl-k">import</span> <span class="pl-s1">dotty</span>
+<span class="pl-s1">dot</span> <span class="pl-c1">=</span> <span class="pl-en">dotty</span>(<span class="pl-s1">data</span>)
+<span class="pl-s1">dot</span>[<span class="pl-s">'company'</span>]
+<span class="pl-s1">dot</span>[<span class="pl-s">'company.employees'</span>]
+<span class="pl-s1">dot</span>[<span class="pl-s">'company'</span>][<span class="pl-s">'employees'</span>]
+<span class="pl-s1">dot</span>[<span class="pl-s">'company.employees.0'</span>]</pre></div>
+<h3><a id="user-content-the-bad" class="anchor" aria-hidden="true" href="#the-bad"><span aria-hidden="true" class="octicon octicon-link"></span></a>The Bad</h3>
+<h4><a id="user-content-type" class="anchor" aria-hidden="true" href="#type"><span aria-hidden="true" class="octicon octicon-link"></span></a>Type</h4>
+<p>Is the dotty product a dict? What is it?</p>
+<h4><a id="user-content-input-issues" class="anchor" aria-hidden="true" href="#input-issues"><span aria-hidden="true" class="octicon octicon-link"></span></a>Input Issues</h4>
+<div class="highlight highlight-source-python"><pre><span class="pl-s1">dot</span>[<span class="pl-s">'company.company.name'</span>]
+<span class="pl-s1">dot</span> <span class="pl-c1">=</span> <span class="pl-en">dotty</span>(<span class="pl-s1">data</span>, <span class="pl-s1">separator</span><span class="pl-c1">=</span><span class="pl-s">'/'</span>)
+
+<span class="pl-k">from</span> <span class="pl-s1">dotty_dict</span> <span class="pl-k">import</span> <span class="pl-v">Dotty</span>
+<span class="pl-s1">dot</span> <span class="pl-c1">=</span> <span class="pl-v">Dotty</span>(<span class="pl-s1">data</span>, <span class="pl-s1">separator</span><span class="pl-c1">=</span><span class="pl-s">'/'</span>)
+<span class="pl-s1">dot</span>[<span class="pl-s">'company/company.name'</span>]</pre></div>
+<div class="highlight highlight-source-python"><pre><span class="pl-s1">mixed</span> <span class="pl-c1">=</span> [
+    {
+        <span class="pl-s">'name'</span>: <span class="pl-s">'Alice'</span>,
+        <span class="pl-s">'age'</span>: <span class="pl-c1">30</span>,
+        <span class="pl-s">'address'</span>: {
+            <span class="pl-s">'street'</span>: <span class="pl-s">'123 Main St'</span>,
+            <span class="pl-s">'city'</span>: <span class="pl-s">'Anytown'</span>,
+            <span class="pl-s">'state'</span>: <span class="pl-s">'CA'</span>
+        },
+        <span class="pl-s">'interests'</span>: [<span class="pl-s">'reading'</span>, <span class="pl-s">'hiking'</span>]
+    },
+    {
+        <span class="pl-s">'name'</span>: <span class="pl-s">'Bob'</span>,
+        <span class="pl-s">'age'</span>: <span class="pl-c1">25</span>,
+        <span class="pl-s">'address'</span>: {
+            <span class="pl-s">'street'</span>: <span class="pl-s">'456 Elm St'</span>,
+            <span class="pl-s">'city'</span>: <span class="pl-s">'Othertown'</span>,
+            <span class="pl-s">'state'</span>: <span class="pl-s">'NY'</span>
+        },
+        <span class="pl-s">'interests'</span>: [<span class="pl-s">'cooking'</span>, <span class="pl-s">'traveling'</span>]
+    },
+    {
+        <span class="pl-s">'name'</span>: <span class="pl-s">'Charlie'</span>,
+        <span class="pl-s">'age'</span>: <span class="pl-c1">40</span>,
+        <span class="pl-s">'address'</span>: {
+            <span class="pl-s">'street'</span>: <span class="pl-s">'789 Oak St'</span>,
+            <span class="pl-s">'city'</span>: <span class="pl-s">'Somewhere'</span>,
+            <span class="pl-s">'state'</span>: <span class="pl-s">'TX'</span>
+        },
+        <span class="pl-s">'interests'</span>: [<span class="pl-s">'painting'</span>, <span class="pl-s">'music'</span>]
+    },
+    {
+        <span class="pl-s">'name'</span>: <span class="pl-s">'Dave'</span>,
+        <span class="pl-s">'age'</span>: <span class="pl-c1">35</span>,
+        <span class="pl-s">'address'</span>: {
+            <span class="pl-s">'street'</span>: <span class="pl-s">'321 Pine St'</span>,
+            <span class="pl-s">'city'</span>: <span class="pl-s">'Nowhere'</span>,
+            <span class="pl-s">'state'</span>: <span class="pl-s">'FL'</span>
+        },
+    <span class="pl-s">'interests'</span>: [<span class="pl-s">'swimming'</span>, <span class="pl-s">'fishing'</span>]}]</pre></div>
+<div class="highlight highlight-source-python"><pre><span class="pl-s1">dot</span> <span class="pl-c1">=</span> <span class="pl-en">dotty</span>(<span class="pl-s1">mixed</span>)</pre></div>
+<h3><a id="user-content-benedict" class="anchor" aria-hidden="true" href="#benedict"><span aria-hidden="true" class="octicon octicon-link"></span></a>Benedict</h3>
+<div class="highlight highlight-source-python"><pre><span class="pl-k">from</span> <span class="pl-s1">benedict</span> <span class="pl-k">import</span> <span class="pl-s1">benedict</span>
+<span class="pl-s1">bene</span> <span class="pl-c1">=</span> <span class="pl-en">benedict</span>(<span class="pl-s1">data</span>)
+<span class="pl-s1">bene</span> <span class="pl-c1">=</span> <span class="pl-en">benedict</span>(<span class="pl-s1">data</span>, <span class="pl-s1">keypath_separator</span><span class="pl-c1">=</span><span class="pl-s">"/"</span>)</pre></div>
+<h4><a id="user-content-the-good-1" class="anchor" aria-hidden="true" href="#the-good-1"><span aria-hidden="true" class="octicon octicon-link"></span></a>The Good</h4>
+<div class="highlight highlight-source-python"><pre><span class="pl-s1">bene</span>[<span class="pl-s">'company/company.name'</span>]
+<span class="pl-en">isinstance</span>(<span class="pl-s1">bene</span>, <span class="pl-s1">dict</span>)
+
+<span class="pl-s1">bene</span>.<span class="pl-en">search</span>(<span class="pl-s">"Jane"</span>)</pre></div>
+<h4><a id="user-content-the-bad-1" class="anchor" aria-hidden="true" href="#the-bad-1"><span aria-hidden="true" class="octicon octicon-link"></span></a>The Bad</h4>
+<h4><a id="user-content-input-issues-1" class="anchor" aria-hidden="true" href="#input-issues-1"><span aria-hidden="true" class="octicon octicon-link"></span></a>Input Issues</h4>
+<p>Well, that separator thing by default still has edge cases. And</p>
+<div class="highlight highlight-source-python"><pre><span class="pl-s1">bene</span> <span class="pl-c1">=</span> <span class="pl-en">benedict</span>(<span class="pl-s1">mixed</span>)</pre></div>
+<h2><a id="user-content-how-can-we-do-better" class="anchor" aria-hidden="true" href="#how-can-we-do-better"><span aria-hidden="true" class="octicon octicon-link"></span></a>How can we do better?</h2>
+<h3><a id="user-content-what-do-we-really-want" class="anchor" aria-hidden="true" href="#what-do-we-really-want"><span aria-hidden="true" class="octicon octicon-link"></span></a>What do we really want?</h3>
+<h4><a id="user-content-typing" class="anchor" aria-hidden="true" href="#typing"><span aria-hidden="true" class="octicon octicon-link"></span></a>Typing</h4>
+<ul>
+<li>We want to be able to supply all kinds of collections, not just dict.
+<ul>
+<li>lists</li>
+<li>tuple</li>
+<li>deques</li>
+<li>etc.</li>
+</ul>
+</li>
+<li>I want <em>real</em> dicts, list, etc
+<ul>
+<li>isinstance should work. A supplied dict should yield a dict instance.</li>
+<li>A supplied list should work, <em>at all</em>, same for other collection types.</li>
+<li>subclassing should be available.</li>
+</ul>
+</li>
+</ul>
+<h4><a id="user-content-better-traversal" class="anchor" aria-hidden="true" href="#better-traversal"><span aria-hidden="true" class="octicon octicon-link"></span></a>Better Traversal</h4>
+<p>It would be nice if this path separator stuff was solved. How about an iterator that's not a string?</p>
+<p>Instead of</p>
+<div class="highlight highlight-source-python"><pre><span class="pl-s1">dot</span> <span class="pl-c1">=</span> <span class="pl-v">Dotty</span>(<span class="pl-s1">data</span>, <span class="pl-s1">separator</span><span class="pl-c1">=</span><span class="pl-s">'/'</span>)
+<span class="pl-s1">dot</span>[<span class="pl-s">'company/company.name'</span>]</pre></div>
+<p>we can do</p>
+<div class="highlight highlight-source-python"><pre><span class="pl-s1">dc</span> <span class="pl-c1">=</span> <span class="pl-v">DeepCollection</span>(<span class="pl-s1">data</span>)
+<span class="pl-s1">dc</span>[<span class="pl-s">'company'</span>, <span class="pl-s">'company.name'</span>]</pre></div>
+<p>No seperator issue!</p>
+<p>What if we're unsure of our data, or just want to type a quick shorthand?
+Let's add a nice pattern matching traversal feature. We can handle globs, regex, etc.</p>
+<div class="highlight highlight-source-python"><pre><span class="pl-s1">dc</span>[<span class="pl-s">'**'</span>, <span class="pl-s">'*zip*'</span>]</pre></div>
+<p>So, we have something similar to the separator issue before. What if we don't want to glob? Use strict traversal.</p>
+<div class="highlight highlight-source-python"><pre><span class="pl-s1">dc</span> <span class="pl-c1">=</span> <span class="pl-v">DeepCollection</span>(<span class="pl-s1">data</span>, <span class="pl-s1">strict</span><span class="pl-c1">=</span><span class="pl-c1">True</span>)
+<span class="pl-s1">dc</span>[<span class="pl-s">'company'</span>, <span class="pl-s">'company.name'</span>]
+<span class="pl-s1">dc</span>[<span class="pl-s">'**'</span>, <span class="pl-s">'*zip*'</span>]</pre></div>
+<p>I want native types to support better features surounding deep 
+collections. For now though, I won't jump to C and make people actually 
+run a fork of CPython. The next best thing is providing a way to add 
+this functionality to all the existing types.</p>
+<h3><a id="user-content-dynamic-inheritence" class="anchor" aria-hidden="true" href="#dynamic-inheritence"><span aria-hidden="true" class="octicon octicon-link"></span></a>Dynamic Inheritence</h3>
+<h4><a id="user-content-via-function-based-class-factory" class="anchor" aria-hidden="true" href="#via-function-based-class-factory"><span aria-hidden="true" class="octicon octicon-link"></span></a>Via function-based class factory</h4>
+<div class="highlight highlight-source-python"><pre><span class="pl-k">def</span> <span class="pl-en">deep_collection</span>(<span class="pl-s1">obj</span>):
+    <span class="pl-k">class</span> <span class="pl-v">DeepCollection</span>(<span class="pl-en">type</span>(<span class="pl-s1">obj</span>)):
+        <span class="pl-k">pass</span>
+    <span class="pl-k">return</span> <span class="pl-v">DeepCollection</span>(<span class="pl-s1">obj</span>)
+
+<span class="pl-s1">dc</span> <span class="pl-c1">=</span> <span class="pl-en">deep_collection</span>([<span class="pl-c1">1</span>,<span class="pl-c1">2</span>,<span class="pl-c1">3</span>])
+<span class="pl-en">isinstance</span>(<span class="pl-s1">dc</span>, <span class="pl-s1">list</span>)
+
+<span class="pl-s1">dc</span> <span class="pl-c1">=</span> <span class="pl-en">deep_collection</span>({<span class="pl-s">"a"</span>: <span class="pl-c1">1</span>})
+<span class="pl-en">isinstance</span>(<span class="pl-s1">dc</span>, <span class="pl-s1">dict</span>)
+
+<span class="pl-c"># XXX direct access to DeepCollection? Customizing?</span>
+<span class="pl-c"># XXX subclasses?</span></pre></div>
+<h4><a id="user-content-via-a-metaclass" class="anchor" aria-hidden="true" href="#via-a-metaclass"><span aria-hidden="true" class="octicon octicon-link"></span></a>Via a metaclass</h4>
+<div class="highlight highlight-source-python"><pre><span class="pl-c"># class type(name, bases, dict, **kwds)</span>
+
+<span class="pl-k">class</span> <span class="pl-v">DynamicSubclasser</span>(<span class="pl-s1">type</span>):
+    <span class="pl-k">def</span> <span class="pl-en">__call__</span>(<span class="pl-s1">cls</span>, <span class="pl-c1">*</span><span class="pl-s1">args</span>, <span class="pl-c1">**</span><span class="pl-s1">kwargs</span>):
+        <span class="pl-s1">obj</span> <span class="pl-c1">=</span> <span class="pl-s1">args</span>[<span class="pl-c1">0</span>]
+        <span class="pl-s1">args</span> <span class="pl-c1">=</span> <span class="pl-s1">args</span>[<span class="pl-c1">1</span>:]
+
+        <span class="pl-s1">dynamic_parent_cls</span> <span class="pl-c1">=</span> <span class="pl-en">type</span>(<span class="pl-s1">obj</span>)
+
+        <span class="pl-s1">new_cls</span> <span class="pl-c1">=</span> <span class="pl-en">type</span>(
+            <span class="pl-s">f"<span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">cls</span>.<span class="pl-s1">__name__</span><span class="pl-kos">}</span></span>_<span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">dynamic_parent_cls</span>.<span class="pl-s1">__name__</span><span class="pl-kos">}</span></span>"</span>,
+            (<span class="pl-s1">cls</span>, <span class="pl-s1">dynamic_parent_cls</span>),
+            {},
+        )
+
+        <span class="pl-s1">instance</span> <span class="pl-c1">=</span> <span class="pl-s1">new_cls</span>.<span class="pl-en">__new__</span>(<span class="pl-s1">new_cls</span>, <span class="pl-c1">*</span><span class="pl-s1">args</span>, <span class="pl-c1">**</span><span class="pl-s1">kwargs</span>)
+        <span class="pl-s1">instance</span>.<span class="pl-en">__init__</span>(<span class="pl-s1">obj</span>, <span class="pl-c1">*</span><span class="pl-s1">args</span>, <span class="pl-c1">**</span><span class="pl-s1">kwargs</span>)
+        <span class="pl-k">return</span> <span class="pl-s1">instance</span>
+
+<span class="pl-k">class</span> <span class="pl-v">DeepCollection</span>(<span class="pl-s1">metaclass</span><span class="pl-c1">=</span><span class="pl-v">DynamicSubclasser</span>):
+    <span class="pl-k">def</span> <span class="pl-en">__init__</span>(
+        <span class="pl-s1">self</span>,
+        <span class="pl-s1">obj</span>,
+        <span class="pl-c1">*</span><span class="pl-s1">args</span>,
+        <span class="pl-c1">**</span><span class="pl-s1">kwargs</span>,
+    ):
+        <span class="pl-en">super</span>().<span class="pl-en">__init__</span>(<span class="pl-s1">obj</span>, <span class="pl-c1">*</span><span class="pl-s1">args</span>, <span class="pl-c1">**</span><span class="pl-s1">kwargs</span>)</pre></div>
+<p>Check lists, dicts, tuples</p>
+<div class="highlight highlight-source-python"><pre><span class="pl-k">class</span> <span class="pl-v">DynamicSubclasser</span>(<span class="pl-s1">type</span>):
+    <span class="pl-k">def</span> <span class="pl-en">__call__</span>(<span class="pl-s1">cls</span>, <span class="pl-c1">*</span><span class="pl-s1">args</span>, <span class="pl-c1">**</span><span class="pl-s1">kwargs</span>):
+        <span class="pl-s1">obj</span> <span class="pl-c1">=</span> <span class="pl-s1">args</span>[<span class="pl-c1">0</span>]
+        <span class="pl-s1">args</span> <span class="pl-c1">=</span> <span class="pl-s1">args</span>[<span class="pl-c1">1</span>:]
+
+        <span class="pl-s1">dynamic_parent_cls</span> <span class="pl-c1">=</span> <span class="pl-en">type</span>(<span class="pl-s1">obj</span>)
+
+        <span class="pl-s1">new_cls</span> <span class="pl-c1">=</span> <span class="pl-en">type</span>(
+            <span class="pl-s">f"<span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">cls</span>.<span class="pl-s1">__name__</span><span class="pl-kos">}</span></span>_<span class="pl-s1"><span class="pl-kos">{</span><span class="pl-s1">dynamic_parent_cls</span>.<span class="pl-s1">__name__</span><span class="pl-kos">}</span></span>"</span>,
+            (<span class="pl-s1">cls</span>, <span class="pl-s1">dynamic_parent_cls</span>),
+            {},
+        )
+
+        <span class="pl-s1">instance</span> <span class="pl-c1">=</span> <span class="pl-s1">new_cls</span>.<span class="pl-en">__new__</span>(<span class="pl-s1">new_cls</span>, <span class="pl-s1">obj</span>, <span class="pl-c1">*</span><span class="pl-s1">args</span>, <span class="pl-c1">**</span><span class="pl-s1">kwargs</span>)
+        <span class="pl-s1">instance</span>.<span class="pl-en">__init__</span>(<span class="pl-s1">obj</span>, <span class="pl-c1">*</span><span class="pl-s1">args</span>, <span class="pl-c1">**</span><span class="pl-s1">kwargs</span>)
+        <span class="pl-k">return</span> <span class="pl-s1">instance</span>
+
+<span class="pl-k">class</span> <span class="pl-v">DeepCollection</span>(<span class="pl-s1">metaclass</span><span class="pl-c1">=</span><span class="pl-v">DynamicSubclasser</span>):
+    <span class="pl-k">def</span> <span class="pl-en">__init__</span>(
+        <span class="pl-s1">self</span>,
+        <span class="pl-s1">obj</span>,
+        <span class="pl-c1">*</span><span class="pl-s1">args</span>,
+        <span class="pl-c1">**</span><span class="pl-s1">kwargs</span>,
+    ):
+        <span class="pl-k">try</span>:
+            <span class="pl-en">super</span>().<span class="pl-en">__init__</span>(<span class="pl-s1">obj</span>, <span class="pl-c1">*</span><span class="pl-s1">args</span>, <span class="pl-c1">**</span><span class="pl-s1">kwargs</span>)
+        <span class="pl-k">except</span> <span class="pl-v">TypeError</span>:
+            <span class="pl-k">pass</span></pre></div>
+<p>Yay, immutables!</p>
+<h3><a id="user-content-traversal" class="anchor" aria-hidden="true" href="#traversal"><span aria-hidden="true" class="octicon octicon-link"></span></a>Traversal</h3>
+<p>We want to support a iterable based path traversal for all of the things.</p>
+<ul>
+<li><code>get</code></li>
+<li>
+<code>__getitem__</code> aka dc[x]</li>
+<li><code>set</code></li>
+<li>
+<code>__setitem__</code> aka dc[x] = y</li>
+<li><code>del</code></li>
+<li>
+<code>__delitem__</code> aka del dc[x]</li>
+<li><code>paths_to_key</code></li>
+<li><code>paths_to_value</code></li>
+<li><code>values_for_key</code></li>
+<li>...</li>
+</ul>
+<p>Tree traversal is (arguably) best done with recursion.</p>
+<p>Excerpt from <a href="https://github.com/terminal-labs/deep_collections/blob/main/deep_collections/__init__.py">https://github.com/terminal-labs/deep_collections/blob/main/deep_collections/__init__.py</a></p>
+<div class="highlight highlight-source-python"><pre><span class="pl-k">def</span> <span class="pl-en">_paths_to_simple_key</span>(<span class="pl-s1">obj</span>, <span class="pl-s1">key</span>, <span class="pl-c1">*</span><span class="pl-s1">args</span>, <span class="pl-s1">match_with</span>, \
+    <span class="pl-s1">_current</span>, <span class="pl-c1">**</span><span class="pl-s1">kwargs</span>):
+    ...
+    <span class="pl-k">if</span> <span class="pl-en">isinstance</span>(<span class="pl-s1">obj</span>, <span class="pl-s1">dict</span>):
+        <span class="pl-k">for</span> <span class="pl-s1">k</span>, <span class="pl-s1">v</span> <span class="pl-c1">in</span> <span class="pl-s1">obj</span>.<span class="pl-en">items</span>():
+            <span class="pl-k">if</span> <span class="pl-en">pathlike</span>(<span class="pl-s1">v</span>):
+                <span class="pl-k">yield</span> <span class="pl-k">from</span> <span class="pl-en">paths_to_key</span>(...)
+            <span class="pl-k">if</span> <span class="pl-en">match_func</span>(<span class="pl-s1">k</span>, <span class="pl-s1">key</span>):
+                <span class="pl-k">yield</span> <span class="pl-s1">_current</span> <span class="pl-c1">+</span> [<span class="pl-s1">k</span>]
+    <span class="pl-k">elif</span> <span class="pl-en">isinstance</span>(<span class="pl-s1">obj</span>, <span class="pl-s1">list</span>):
+        <span class="pl-k">for</span> <span class="pl-s1">idx</span>, <span class="pl-s1">v</span> <span class="pl-c1">in</span> <span class="pl-en">enumerate</span>(<span class="pl-s1">obj</span>):
+            <span class="pl-k">if</span> <span class="pl-en">pathlike</span>(<span class="pl-s1">v</span>):
+                <span class="pl-k">yield</span> <span class="pl-k">from</span> <span class="pl-en">paths_to_key</span>(...)
+            <span class="pl-k">elif</span> <span class="pl-en">match_func</span>(<span class="pl-s1">idx</span>, <span class="pl-s1">key</span>):
+                <span class="pl-k">yield</span> <span class="pl-s1">_current</span> <span class="pl-c1">+</span> [<span class="pl-s1">idx</span>]
+    <span class="pl-k">elif</span> ...
+
+<span class="pl-s1">def</span> <span class="pl-s1">_paths_to_pathlike_key</span>(...):
+    ...
+        <span class="pl-k">yield</span> <span class="pl-k">from</span> <span class="pl-en">paths_to_key</span>(...)
+
+<span class="pl-k">def</span> <span class="pl-en">paths_to_key</span>(<span class="pl-s1">obj</span>, <span class="pl-s1">key</span>, ...):
+    <span class="pl-k">if</span> <span class="pl-en">pathlike</span>(<span class="pl-s1">key</span>):  <span class="pl-c"># key is dict, defaultdict, etc.</span>
+        <span class="pl-k">yield</span> <span class="pl-k">from</span> <span class="pl-en">_paths_to_pathlike_key</span>(
+            <span class="pl-s1">obj</span>,
+            <span class="pl-s1">key</span>,
+            ...
+        )
+    <span class="pl-k">else</span>:  <span class="pl-c"># key is simple; str, int, float, etc.</span>
+        <span class="pl-k">yield</span> <span class="pl-k">from</span> <span class="pl-en">_paths_to_simple_key</span>(
+            <span class="pl-s1">obj</span>,
+            <span class="pl-s1">key</span>,
+            ...
+        )</pre></div>
+<p>Good enough, right? If something is quacking like a dict or list, treat it like one?
+Nah, <em>really</em> duck type it. Program to the interface.</p>
+<div class="highlight highlight-source-python"><pre><span class="pl-k">def</span> <span class="pl-en">_paths_to_simple_key</span>(<span class="pl-s1">obj</span>, <span class="pl-s1">key</span>, <span class="pl-c1">*</span><span class="pl-s1">args</span>, <span class="pl-s1">match_with</span>, \
+    <span class="pl-s1">_current</span>, <span class="pl-c1">**</span><span class="pl-s1">kwargs</span>):
+    ...
+    <span class="pl-k">try</span>:
+        <span class="pl-k">for</span> <span class="pl-s1">k</span>, <span class="pl-s1">v</span> <span class="pl-c1">in</span> <span class="pl-s1">obj</span>.<span class="pl-en">items</span>():
+            <span class="pl-k">if</span> <span class="pl-en">pathlike</span>(<span class="pl-s1">v</span>):
+                <span class="pl-k">yield</span> <span class="pl-k">from</span> <span class="pl-en">paths_to_key</span>(...)
+            <span class="pl-k">if</span> <span class="pl-en">match_func</span>(<span class="pl-s1">k</span>, <span class="pl-s1">key</span>):
+                <span class="pl-k">yield</span> <span class="pl-s1">_current</span> <span class="pl-c1">+</span> [<span class="pl-s1">k</span>]
+    <span class="pl-k">except</span> <span class="pl-v">AttributeError</span>:  <span class="pl-c"># no .items</span>
+        <span class="pl-k">for</span> <span class="pl-s1">idx</span>, <span class="pl-s1">v</span> <span class="pl-c1">in</span> <span class="pl-en">enumerate</span>(<span class="pl-s1">obj</span>):
+            <span class="pl-k">if</span> <span class="pl-en">pathlike</span>(<span class="pl-s1">v</span>):
+                <span class="pl-k">yield</span> <span class="pl-k">from</span> <span class="pl-en">paths_to_key</span>(...)
+            <span class="pl-k">elif</span> <span class="pl-en">match_func</span>(<span class="pl-s1">idx</span>, <span class="pl-s1">key</span>):
+                <span class="pl-k">yield</span> <span class="pl-s1">_current</span> <span class="pl-c1">+</span> [<span class="pl-s1">idx</span>]</pre></div>
+<p>Generalizing is <em>hard</em>.</p>
+<p>But it's possible. And it's <em>mostly</em> testable. We can <em>exhaustively</em> test the built-in types and collections module, and any 3rd party types we come across that seems worth it.</p>
+<p>Ok, what do we have now?</p>
+<div class="highlight highlight-source-python"><pre><span class="pl-k">from</span> <span class="pl-s1">deep_collections</span> <span class="pl-k">import</span> <span class="pl-v">DeepCollection</span>
+<span class="pl-s1">dc</span> <span class="pl-c1">=</span> <span class="pl-v">DeepCollection</span>(<span class="pl-s1">data</span>)
+
+<span class="pl-s1">dc</span>[<span class="pl-s">'**'</span>, <span class="pl-s">'company.name'</span>]
+<span class="pl-s1">dc</span>[<span class="pl-s">'**'</span>, <span class="pl-s">'*zip*'</span>]
+<span class="pl-s1">dc</span>.<span class="pl-en">deduped_values_for_key</span>(<span class="pl-s">"zip.code"</span>)
+
+<span class="pl-s1">dc</span>.<span class="pl-en">paths_to_key</span>(<span class="pl-s">"zip.code"</span>)
+<span class="pl-en">list</span>(<span class="pl-s1">dc</span>.<span class="pl-en">paths_to_key</span>(<span class="pl-s">"zip.code"</span>))
+<span class="pl-s1">dc</span>[<span class="pl-en">list</span>(<span class="pl-s1">dc</span>.<span class="pl-en">paths_to_key</span>(<span class="pl-s">"zip.code"</span>))[<span class="pl-c1">1</span>]]</pre></div>
+
+                      </article>
+                    </div>
+                  </div>
+
+                
+
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  </div><script>
+    function showCanonicalImages() {
+      var images = document.getElementsByTagName('img');
+      if (!images) {
+        return;
+      }
+      for (var index = 0; index < images.length; index++) {
+        var image = images[index];
+        if (image.getAttribute('data-canonical-src') && image.src !== image.getAttribute('data-canonical-src')) {
+          image.src = image.getAttribute('data-canonical-src');
+        }
+      }
+    }
+
+    function scrollToHash() {
+      if (location.hash && !document.querySelector(':target')) {
+        var element = document.getElementById('user-content-' + location.hash.slice(1));
+        if (element) {
+           element.scrollIntoView();
+        }
+      }
+    }
+
+    function autorefreshContent(eventSourceUrl) {
+      var initialTitle = document.title;
+      var contentElement = document.getElementById('grip-content');
+      var source = new EventSource(eventSourceUrl);
+      var isRendering = false;
+
+      source.onmessage = function(ev) {
+        var msg = JSON.parse(ev.data);
+        if (msg.updating) {
+          isRendering = true;
+          document.title = '(Rendering) ' + document.title;
+        } else {
+          isRendering = false;
+          document.title = initialTitle;
+          contentElement.innerHTML = msg.content;
+          showCanonicalImages();
+        }
+      }
+
+      source.onerror = function(e) {
+        if (e.readyState === EventSource.CLOSED && isRendering) {
+          isRendering = false;
+          document.title = initialTitle;
+        }
+      }
+    }
+
+    window.onhashchange = function() {
+      scrollToHash();
+    }
+
+    window.onload = function() {
+      scrollToHash();
+    }
+
+    showCanonicalImages();
+
+    var autorefreshUrl = document.getElementById('preview-page').getAttribute('data-autorefresh-url');
+    if (autorefreshUrl) {
+      autorefreshContent(autorefreshUrl);
+    }
+  </script>
+
+</body></html>

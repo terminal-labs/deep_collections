@@ -83,7 +83,7 @@ dot['company.employees.0']
 
 #### Type
 
-Is the dot product a dict? What is it?
+Is the dotty product a dict? What is it?
 
 #### Input Issues
 
@@ -403,6 +403,7 @@ Ok, what do we have now?
 
 ```python
 from deep_collections import DeepCollection
+dc = DeepCollection(data)
 
 dc['**', 'company.name']
 dc['**', '*zip*']
