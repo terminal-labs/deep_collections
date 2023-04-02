@@ -94,6 +94,7 @@ def _resolve_double_splat(obj, path, *args, **kwargs):
         )
         for p in paths:
             path_ends = list(
+                # Use strict because the `paths` were just resolved
                 paths_to_key(
                     getitem_by_path_strict(obj, p),
                     path_end,
@@ -131,11 +132,11 @@ def resolve_path(obj, path, *args, match_with="glob", recursive_match_all=True, 
         if path_remainder:
             for key in keys:
                 sub_obj = obj[key]
-                smk = matched_keys(sub_obj, path_remainder[0], match_with, **kwargs)
-                if smk:
-                    yv = (
-                        [key] + sk
-                        for sk in resolve_path(
+                sub_keys = matched_keys(sub_obj, path_remainder[0], match_with, **kwargs)
+                if sub_keys:
+                    yield_values = (
+                        [key] + sub_key
+                        for sub_key in resolve_path(
                             sub_obj,
                             path_remainder,
                             *args,
@@ -144,7 +145,7 @@ def resolve_path(obj, path, *args, match_with="glob", recursive_match_all=True, 
                             **kwargs,
                         )
                     )
-                    yield from yv
+                    yield from yield_values
         else:
             yield from ([key] for key in keys)
 
@@ -203,10 +204,11 @@ def getitem_by_path(obj, path, *args, match_with="glob", strict=False, **kwargs)
 
     # len(paths) == 0
     # Check if any part of the path appears to use a pattern. If so, return an empty
-    # list, rather than a KeyError/IndexError because 0 matched results.
-
+    # list, rather than a KeyError/IndexError because since a pattern was given, we
+    # are expecting a list of search results, which can be empty, rather than a
+    # strict retrieval.
     if any(match_style(match_with).patterned(p, *args, **kwargs) for p in path):
-        return paths
+        return []
 
     return getitem_by_path_strict(obj, path)
 
@@ -234,7 +236,6 @@ def set_by_path(obj, path, value, *args, **kwargs):
 
     traversed = []
     for part in path:
-        # branch = get_by_path(obj, [part])
         branch = getitem_by_path(
             obj,
             traversed,
@@ -769,13 +770,25 @@ class DeepCollection(metaclass=DynamicSubclasser):
         return f"DeepCollection({super_repr})"
 
     # Common public methods
-    def get(self, path, default=None, *, match_args=None, match_with=None, recursive_match_all=None, match_kwargs=None):
+    def get(
+        self,
+        path,
+        default=None,
+        *,
+        match_args=None,
+        match_with=None,
+        recursive_match_all=None,
+        match_kwargs=None,
+        strict=None,
+    ):
         # These are one-offs and should not mutate self
         match_args = match_args or self.match_args
         match_with = match_with or self.match_with
         match_kwargs = match_kwargs or self.match_kwargs
         if recursive_match_all is None:
             recursive_match_all = self.recursive_match_all
+        if strict is None:
+            strict = self.strict
 
         try:
             rv = getitem_by_path(
@@ -784,6 +797,7 @@ class DeepCollection(metaclass=DynamicSubclasser):
                 *match_args,
                 match_with=match_with,
                 recursive_match_all=recursive_match_all,
+                strict=strict,
                 **match_kwargs,
             )
         except (KeyError, IndexError, TypeError):
@@ -797,6 +811,7 @@ class DeepCollection(metaclass=DynamicSubclasser):
                 recursive_match_all=self.recursive_match_all,
                 match_args=self.match_args,
                 match_kwargs=self.match_kwargs,
+                strict=strict,
             )
         return rv
 
@@ -805,7 +820,7 @@ class DeepCollection(metaclass=DynamicSubclasser):
         return super().items(*args, **kwargs)
 
     # Unique public methods
-    def paths_to_key(self, key, *args, match_with=None, recursive_match_all=None, **kwargs):
+    def paths_to_key(self, key, *args, match_with=None, recursive_match_all=None, strict=None, **kwargs):
         """
         >>> list(DeepCollection([{"x": {"y": "value", "z": {"y": "asdf"}}}]).paths_to_key("y"))
         [[0, 'x', 'y'], [0, 'x', 'z', 'y']]
@@ -815,9 +830,17 @@ class DeepCollection(metaclass=DynamicSubclasser):
         match_kwargs = kwargs or self.match_kwargs
         if recursive_match_all is None:
             recursive_match_all = self.recursive_match_all
+        if strict is None:
+            strict = self.strict
 
         yield from paths_to_key(
-            self, key, *match_args, match_with=match_with, recursive_match_all=recursive_match_all, **match_kwargs
+            self,
+            key,
+            *match_args,
+            match_with=match_with,
+            recursive_match_all=recursive_match_all,
+            strict=strict,
+            **match_kwargs,
         )
 
     def paths_to_value(self, key, *args, match_with=None, recursive_match_all=None, **kwargs):
@@ -835,7 +858,7 @@ class DeepCollection(metaclass=DynamicSubclasser):
             self, key, *match_args, match_with=match_with, recursive_match_all=recursive_match_all, **match_kwargs
         )
 
-    def values_for_key(self, key, *args, match_with=None, recursive_match_all=None, **kwargs):
+    def values_for_key(self, key, *args, match_with=None, recursive_match_all=None, strict=None, **kwargs):
         """
         >>> dc = DeepCollection([{"x": {"y": "v", "z": {"y": "v"}}, "y": {1: 2}}], return_deep=False)
         >>> list(dc.values_for_key("y"))
@@ -846,12 +869,20 @@ class DeepCollection(metaclass=DynamicSubclasser):
         match_kwargs = kwargs or self.match_kwargs
         if recursive_match_all is None:
             recursive_match_all = self.recursive_match_all
+        if strict is None:
+            strict = self.strict
 
         yield from values_for_key(
-            self, key, *match_args, match_with=match_with, recursive_match_all=recursive_match_all, **match_kwargs
+            self,
+            key,
+            *match_args,
+            match_with=match_with,
+            recursive_match_all=recursive_match_all,
+            strict=strict,
+            **match_kwargs,
         )
 
-    def deduped_values_for_key(self, key, *args, match_with=None, recursive_match_all=None, **kwargs):
+    def deduped_values_for_key(self, key, *args, match_with=None, recursive_match_all=None, strict=None, **kwargs):
         """
         >>> dc = DeepCollection([{"x": {"y": "v", "z": {"y": "v"}}, "y": {1: 2}}], return_deep=False)
         >>> 'v' in dc.deduped_values_for_key("y")  # order not gaurunteed
@@ -864,6 +895,8 @@ class DeepCollection(metaclass=DynamicSubclasser):
         match_kwargs = kwargs or self.match_kwargs
         if recursive_match_all is None:
             recursive_match_all = self.recursive_match_all
+        if strict is None:
+            strict = self.strict
 
         return deduped_items(
             list(
@@ -873,6 +906,7 @@ class DeepCollection(metaclass=DynamicSubclasser):
                     *match_args,
                     match_with=match_with,
                     recursive_match_all=recursive_match_all,
+                    strict=strict,
                     **match_kwargs,
                 )
             )
