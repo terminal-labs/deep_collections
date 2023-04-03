@@ -13,7 +13,7 @@ DeepCollection can take virtually any kind of object including all built-in cont
 
 ### Features
 
-- Path traversal by supplying an list of path components as a key. This works for getting, setting, and deleting.
+- Path traversal by supplying a list of path components as a key. This works for getting, setting, and deleting.
 - Accessing nested components by supply only path fragments.
 - Setting paths when parent parts do not exist.
 - Path traversal through dict-like collections by dot chaining for getting
@@ -29,10 +29,10 @@ DeepCollection can take virtually any kind of object including all built-in cont
 
 DeepCollections has a concept of a "path" for nested collections, where a path is a sequence of keys or indices that if followed in order, traverse the deep collection. As a quick example, `{'a': ['b', {'c': 'd'}]}` could be traversed with the path `['a', 1, 'c']` to find the value `'d'`.
 
-DeepCollections natively use paths as well as simple keys and indices. For `dc = DeepCollection(foo)`, items can be retrieved through the familiar `dc[path]` as normal if `path` is a simple key or index, or if it is an non-stringlike iterable path (strings are assumed to be literal keys). This is done with a custom `__getitem__` method. Similarly, `__delitem__` and `__setitem__` also support using a path. The same flexibility exists for the familiar methods like `.get`, which behaves the same as `dict.get`, but can accept a path as well as a key.
+DeepCollections natively use paths as well as simple keys and indices. For `dc = DeepCollection(foo)`, items can be retrieved through the familiar `dc[path]` as normal if `path` is a simple key or index, or if it is a non-stringlike iterable path (strings are assumed to be literal keys). This is done with a custom `__getitem__` method. Similarly, `__delitem__` and `__setitem__` also support using a path. The same flexibility exists for the familiar methods like `.get`, which behaves the same as `dict.get`, but can accept a path as well as a key.
 
 ### Matching
-Path elements are interpretted as patterns to match against keys and indices. By default this is feature is on and uses globbing.
+Path elements are interpretted as patterns to match against keys and indices. By default this feature is on and uses globbing.
 
 #### Recursion
 
