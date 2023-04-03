@@ -58,8 +58,9 @@ To enable pattern matching (like globbing) to make sense when attempting to matc
 
 ```python
 dc = DeepCollection(["a", "b", "c"])
-dc["[0-1]"] == [0, 1]
-dc["5"] == DeepCollection([])
+dc["[0-1]"] == DeepCollection(["a", "b"])
+dc["[5]"] == DeepCollection([])  # Matching pattern detected (globbing), so no results yields an empty list.
+dc["5"]  # Raises TypeError. No matching pattern detected, so direct use of `"5"` was attempted and not cast to an int.
 
 dc = DeepCollection({1: 'i', '1': 'j', 'a': 'k'})
 dc['*[!1]'] == "k"
