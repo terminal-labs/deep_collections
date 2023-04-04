@@ -66,7 +66,7 @@ dc = DeepCollection({1: 'i', '1': 'j', 'a': 'k'})
 dc['*[!1]'] == "k"
 ```
 
-This is a compromise to afford pattern matching indices and numeric keys. As with deeper path traversal, since we're matching a pattern, 0 hits is not treated as a KeyError or IndexError, but simply returns no results.
+This is a compromise to afford pattern matching indices and numeric keys. As with deeper path traversal, since we're matching a pattern, 0 hits is not treated as a KeyError or IndexError, but simply returns an empty list.
 
 The often relied upon KeyError and IndexError are both saved when pattern matching is not detected.
 
