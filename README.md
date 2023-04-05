@@ -86,8 +86,10 @@ KeyError: 'a'
 Deep Collections supports the following matching styles:
 
 - glob
-- regex (_built in soon_)
-- none (_built in soon_)
+- regex
+- equality
+- hash
+- glob+regex
 - custom (_built in soon_)
 
 This can be set with many functions by passing e.g. `match_with="regex"`.
@@ -99,6 +101,10 @@ To abandon all matching styles and traverse paths as quickly as possible, use `g
 #### Matching Style: Globbing
 
 Any given path element is matched with `fnmatchcase` from [the Python stdlib](https://docs.python.org/3/library/fnmatch.html#fnmatch.fnmatchcase). This style is used in the above examples.
+
+#### Matching Style: Regex
+
+Any given path element is matched with `re.compile().match()` from [the Python stdlib](https://docs.python.org/3/library/re.html).
 
 ### DeepCollection object API
 

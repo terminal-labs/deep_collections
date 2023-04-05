@@ -35,15 +35,17 @@ fun_five = FunkyInt(5)
         ({fun_five: 1}, -5, {"match_with": "hash"}, 1),
         ({"foo!": 1}, "foo!", {"match_with": "equality"}, 1),
         ({1: 1}, 0, {"match_with": "equality"}, []),
-        ({"accccb": 1}, "a[bcd]*b", {"match_with": "regex"}, 1),
+        ({'alias': 'foo'}, '^a', {"match_with": "regex"}, "foo"),
+        ({'alias': 'foo'}, '^a...s$', {"match_with": "regex"}, "foo"),
+        ({"not a hit": {'alias': 'foo'}}, ["**", '^a'], {"match_with": "regex"}, "foo"),
         ({"xd": 1}, "xd", {"match_with": "regex"}, 1),
-        ({"xd": 1}, "?d", {"match_with": "regex"}, re.error),
+        ({"xd": 1}, "?d", {"match_with": "regex"}, re.error),  # glob, not valid regex
         ({"xd": 1}, "?d", {}, 1),
         ({"xd": 1}, "?d", {}, 1),
         ({"xd": 1}, "Xd", {"case_sensitive": False}, 1),
         (
             {"b": {"accccb": {"xd": {"e": 0}}}},
-            ["**", "a[bcd]*b", "?d", "e"],
+            ["**", "^a", "?d", "e"],
             {"match_with": "glob+regex"},
             0,
         ),
@@ -102,6 +104,26 @@ def test_paths_to_key(obj, key, result):
     else:
         assert list(paths_to_key(obj, key)) == result
 
+# Basic tests of various match styles
+@pytest.mark.parametrize(
+    "obj, key, kwargs, result",
+    [
+        ({'alias': 'foo'}, 'a*', {"match_with": "glob"}, [['alias']]),
+        ({'alias': 'foo'}, '^a', {"match_with": "regex"}, [['alias']]),
+        ({'alias': 'foo'}, '^a', {"match_with": "equality"}, []),
+        ({'alias': 'foo'}, 'alias', {"match_with": "equality"}, [['alias']]),
+        ({'alias': 'foo'}, '?lias', {"match_with": "regex"}, re.error),
+        ({'alias': {'blias': 'foo'}}, '^a', {"match_with": "glob+regex"}, [['alias']]),
+        ({'alias': {'blias': 'foo'}}, '*s', {"match_with": "glob+regex"}, [['alias', 'blias'], ['alias']]),
+        ({1: 'foo'}, 1, {"match_with": "hash"}, [[1]]),
+    ],
+)
+def test_paths_to_key_styles(obj, key, kwargs, result):
+    if inspect.isclass(result) and issubclass(result, Exception):
+        with pytest.raises(result):
+            list(paths_to_key(obj, key, **kwargs))
+    else:
+        assert list(paths_to_key(obj, key, **kwargs)) == result
 
 @pytest.mark.parametrize(
     "obj, value, result",

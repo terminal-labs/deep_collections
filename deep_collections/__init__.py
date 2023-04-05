@@ -122,7 +122,7 @@ def resolve_path(obj, path, *args, match_with="glob", recursive_match_all=True, 
         path = _simplify_double_splats(path)
 
     if recursive_match_all and "**" in path:
-        yield from _resolve_double_splat(obj, path, *args, **kwargs)
+        yield from _resolve_double_splat(obj, path, *args, match_with=match_with, **kwargs)
     elif path:
         first_step = path[0]
         path_remainder = path[1:]
